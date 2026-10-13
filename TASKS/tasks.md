@@ -1,5 +1,14 @@
 # Tasks
 
+## Workspace project format and prompt routing
+
+- [x] Define `WORK_MODELS.md`, `PLAN.md`, `CACHE.md` and `IN_PROGRESS.md` as the canonical project record files.
+- [x] Define transitions: plan → active implementation/bug fix → cache with dated evidence.
+- [x] Add structured AI/person handoff fields for command outputs, status, evidence and next action.
+- [x] Group prompt entrypoints by purpose and retain a mandatory reread route for new tasks/context recovery.
+- [x] Link the project format from agent entrypoints, prompt index, repository map and rule index.
+- [ ] Run PR CI and review all repository-local Markdown links before merge.
+
 ## Workspace and source parity
 
 - [x] Migrate substantive public source items to GitHub and compare the current GitLab tree.
@@ -27,6 +36,7 @@
 - [x] Parse-check all 1,149 JSON files.
 - [x] Syntax-check all 12 JavaScript files.
 - [x] Remove low-benefit ray / dummy-entity / N-way planning and duplicate unresolved-item references.
+- [x] Standardize project records and move completed static checks out of the pending plan into cache.
 - [ ] Test in a real Bedrock world and review Content Log.
 - [ ] Measure tick/frame cost under expected target-device and multiplayer conditions.
 - [ ] Add future optimization code only after a reproducible bottleneck and visual benefit have been recorded.
