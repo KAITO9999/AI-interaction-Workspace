@@ -1,0 +1,6 @@
+{
+  "name": "AgentKit",
+  "version": "0.1.0",
+  "schema_version": 1,
+  "version_source": "agentkit.py:VERSION"
+}
