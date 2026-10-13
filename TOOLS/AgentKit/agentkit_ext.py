@@ -252,7 +252,7 @@ def validate_addon(args: argparse.Namespace) -> int:
                 passed("zip_integrity", "ZIP CRC test completed with no corrupt member.")
             infos = [info for info in archive.infolist() if not info.is_dir()]
             report["file_count"] = len(infos)
-            unsafe = [info.filename for info in infos if PurePosixPath(info.filename).is_absolute() or ".." in PurePosixPath(info.filename).parts or "\\\\" in info.filename]
+            unsafe = [info.filename for info in infos if PurePosixPath(info.filename).is_absolute() or ".." in PurePosixPath(info.filename).parts or "\\" in info.filename]
             if unsafe:
                 failed("archive_paths", f"Unsafe member paths: {unsafe[:10]}")
             else:
