@@ -69,3 +69,18 @@ The audit checks ZIP CRC and member paths, parses JSON, compares BP/RP manifest 
 
     python -m unittest discover -s TOOLS/AgentKit/tests -v
     python -m py_compile TOOLS/AgentKit/agentkit.py TOOLS/AgentKit/agentkit_ext.py
+
+
+### 5. Lightweight tool availability and install-plan report
+
+    python3 TOOLS/AgentKit/toolplan.py
+    python3 TOOLS/AgentKit/toolplan.py --only-missing
+    python3 TOOLS/AgentKit/toolplan.py --platform termux --format json
+
+The report distinguishes commands already found on PATH from missing candidates and prints platform-specific package commands for review. It does not install packages, execute discovered tools, or guarantee that a package exists in every repository. It intentionally focuses on small developer utilities rather than large SDKs or toolchains.
+
+Install the standalone command into the current user's executable directory:
+
+    sh TOOLS/AgentKit/install_toolplan.sh
+
+On Termux, the installer uses `$PREFIX/bin`; elsewhere it defaults to `~/.local/bin`. Override the destination with `AGENTKIT_BIN_DIR=/custom/bin`. The installed command is a copy; rerun the installer after updating the repository.
