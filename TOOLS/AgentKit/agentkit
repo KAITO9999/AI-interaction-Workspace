@@ -1,0 +1,14 @@
+#!/bin/sh
+# AgentKit launcher: choose the richest available implementation.
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+FORCE_SH=0
+if [ -n "$AGENTKIT_FORCE_SH" ]; then FORCE_SH=$AGENTKIT_FORCE_SH; fi
+if [ "$FORCE_SH" = "1" ]; then exec sh "$HERE/agentkit.sh" "$@"; fi
+if command -v python3 >/dev/null 2>&1; then exec python3 "$HERE/agentkit.py" "$@"; fi
+if command -v python >/dev/null 2>&1; then exec python "$HERE/agentkit.py" "$@"; fi
+if command -v sh >/dev/null 2>&1; then
+  echo "AgentKit: Python runtime unavailable; using reduced POSIX shell fallback." >&2
+  exec sh "$HERE/agentkit.sh" "$@"
+fi
+echo "AgentKit ERROR: no supported runtime (Python or POSIX shell) found." >&2
+exit 127

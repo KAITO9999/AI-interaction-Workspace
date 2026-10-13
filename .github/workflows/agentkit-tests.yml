@@ -1,0 +1,27 @@
+name: AgentKit checks
+
+on:
+  push:
+    branches: [main, "migration/**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  agentkit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python source
+        run: python -m py_compile TOOLS/AgentKit/agentkit.py
+      - name: Check POSIX shell syntax
+        run: sh -n TOOLS/AgentKit/agentkit TOOLS/AgentKit/agentkit.sh
+      - name: Run AgentKit tests
+        run: python -m unittest discover -s TOOLS/AgentKit/tests -v
+      - name: Check local Markdown links
+        run: python scripts/check_markdown_links.py
