@@ -44,7 +44,7 @@ def main():
                       "termux_package":termux_pkg,"debian_package":debian_pkg})
     installed=[x for x in items if x["installed"]]
     missing=[x for x in items if not x["installed"]]
-    packages=sorted({x["termux_package" if plat=="termux" else "debian_package"] for x in missing})
+    packages=sorted({x["termux_package" if plat=="termux" else "debian_package"] for x in missing if not (plat=="termux" and x["command"] in {"pytest","tsc"})})
     if plat=="termux":
         pkg_cmd="pkg install "+" ".join(packages)
         pip_cmd="python -m pip install pytest" if any(x["command"]=="pytest" for x in missing) else ""
