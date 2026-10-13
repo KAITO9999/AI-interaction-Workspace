@@ -1,24 +1,34 @@
-# ReForge Visuals 実装キャッシュ
+# ReForge Visuals — implementation cache
 
-Status: IN_PROGRESS
-対象: ReForge Visuals 3.17.8 → 次版
-更新: 2026-10-07
+Status: STATIC REVIEW COMPLETE / RUNTIME TEST PENDING  
+Current artifact: ReForge_Visuals-3.24.1.mcaddon  
+Updated: 2026-10-13
 
-## 参照（公開情報のみ）
-- 公開AI共同作業スペース: https://gitlab.com/ai-work-space2/ai-integration-workspace
-- 現在の成果物: ReForge_Visuals-3.17.8.mcaddon
+## Verified facts
 
-## 今回の作業
-- custom_rain.json のMolang括弧エラー修正
-- default waterの白味を抑え、既存biomeの青みを活かす調整
-- 松明系の混色45パターンについて、手持ち/ドロップ双方から共通混色経路が残っていることを確認
-- 次版3.18.0へ更新
+- BP and RP manifest versions both equal 3.24.1.
+- Minimum engine version is 1.26.0.
+- BP dependencies include @minecraft/server 2.9.0 and @minecraft/server-ui 2.1.0.
+- Package inventory: 1,192 files, including 1,149 JSON files and 12 BP JavaScript files.
+- performance_engine.js supplies the shared scheduler/queue. Preserve it as the primary work-budget gate instead of inventing a second scheduler.
+- The BP scripts do not contain Dimension.getBlockFromRay, Dimension.getTopmostBlock, or spawnEntity calls. The former ray / dummy-entity / N-way proposal is not active implementation in this artifact.
 
-## 混色確認
-10色のlight profileから45通りのユニークな2色組合せが定義済み。
-各混色についてlevel 3〜10のBP blockが存在する。
-手持ち側はplayerSources、ドロップ側はitemGroupsとして同じcompositeCellへ入り、同じ混色選択経路を使用する。
+## Static validation
 
-## 未検証
-- 実機/実ワールドでの見た目
-- Content Logでの実ランタイム確認
+- ZIP integrity and unsafe-path scan: PASS.
+- BP/RP version and dependency matching: PASS.
+- JSON parsing: 1,149 / 1,149 PASS.
+- JavaScript syntax with Node: 12 / 12 PASS.
+- These checks do not prove Bedrock runtime behavior.
+
+## Unknown / not yet tested
+
+- In-world appearance and settings behavior.
+- Sound and fog behavior across biome, weather and water-depth changes.
+- Content Log warnings/errors.
+- Performance under multiple players and target-device constraints.
+- Actual tick/frame cost or visual improvement from any future optimization.
+
+## Current decision
+
+Do not continue the older 3.17.8 / 3.18.0 history as if it described the current artifact. Remove the low-benefit approaches from the plan and remove their duplicate references from incomplete-task lists. Future optimization must be justified by a measured bottleneck and validated in-game; preserve current task budget and cache behavior unless profiling shows a regression.

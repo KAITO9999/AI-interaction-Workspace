@@ -1,31 +1,71 @@
-AgentKit — AI-first Environment Probe & Workflow Helpers
+# AgentKit — environment discovery and workflow helpers
 
-Status: prototype / review required. Version 0.1.0. Python 3.9+ standard library only.
+Core CLI: version 0.1.0. Extension CLI: version 0.2.0. Python standard library only. Python 3.9+ is recommended.
 
-Safety: no privilege escalation, restriction bypass, or credential discovery. probe is heuristic. fetch-probe runs exactly one read-only git ls-remote attempt and stops on first error/timeout; it does not clone. Linux scripts cannot assume access to ChatGPT history. ingest reads only explicitly supplied file/stdin. Review reports before sharing.
-
-Quick start:
+## Core CLI
 
     python3 TOOLS/AgentKit/agentkit.py --help
-    python3 TOOLS/AgentKit/agentkit.py probe --root . --json agentkit-report.json
+    python3 TOOLS/AgentKit/agentkit.py probe --root . --json /tmp/agentkit-report.json
     python3 TOOLS/AgentKit/agentkit.py probe --root . --list-files
-    python3 TOOLS/AgentKit/agentkit.py locate src/example.py --start 20 --end 50
-    python3 TOOLS/AgentKit/agentkit.py note "Investigate syscall tracing fallback" --name syscall
-    python3 TOOLS/AgentKit/agentkit.py ingest conversation.txt --query timeout --save
-    python3 TOOLS/AgentKit/agentkit.py timer 300 --prompt
-    python3 TOOLS/AgentKit/agentkit.py versions --root . --output VERSIONS.md
+    python3 TOOLS/AgentKit/agentkit.py locate path/to/file.py --start 20 --end 50
+    python3 TOOLS/AgentKit/agentkit.py versions --root . --output /tmp/agentkit-capabilities.md
     python3 TOOLS/AgentKit/agentkit.py fetch-probe https://github.com/OWNER/REPOSITORY.git --timeout 5
 
-Probe: root is explicit with --root; default is current working directory. At most 49 files skips page selection; 50+ offers 50/100/200/500/MAX. Hidden build/dependency directories are excluded. Capability presence is not a guarantee that target code works. Timer prints local and UTC end times, but a killed process cannot notify later. fetch-probe tests remote refs only.
+The core probe reports a curated set of known commands and format hints. This is heuristic: finding a command does not prove a target project builds or runs.
 
-Tests from repository root: python3 -m unittest discover -s TOOLS/AgentKit/tests -v
+## Extension CLI
 
+Run:
 
-## Runtime selection / reduced fallback
+    python3 TOOLS/AgentKit/agentkit_ext.py --help
 
-Use the launcher at TOOLS/AgentKit/agentkit. It selects Python when available and otherwise uses the POSIX shell fallback. Set AGENTKIT_FORCE_SH=1 to test the fallback deliberately:
+### 1. Enumerate actual PATH executables
 
-    sh TOOLS/AgentKit/agentkit --help
-    AGENTKIT_FORCE_SH=1 sh TOOLS/AgentKit/agentkit probe --root . --list-files
+    python3 TOOLS/AgentKit/agentkit_ext.py commands
+    python3 TOOLS/AgentKit/agentkit_ext.py commands --filter rust
+    python3 TOOLS/AgentKit/agentkit_ext.py commands --all-path-entries --format tsv
+    python3 TOOLS/AgentKit/agentkit_ext.py commands --format json --output /tmp/path-command-inventory.json
 
-The shell fallback only supports command inventory and file listing. It is not feature-equivalent to the Python version. This is intentional: the fallback should be small and auditable, not a second full implementation.
+The inventory scans executable files in PATH without running them. By default, it keeps the first command name in PATH order. The all-path-entries option also lists shadowed duplicates. Shell built-ins, aliases and functions are not included. Output paths may reveal local usernames or installation layouts; do not commit raw environment inventories without review and sanitization.
+
+### 2. TypeScript to JavaScript compilation
+
+    python3 TOOLS/AgentKit/agentkit_ext.py compile-ts --root path/to/project
+    python3 TOOLS/AgentKit/agentkit_ext.py compile-ts --root path/to/project --check
+    python3 TOOLS/AgentKit/agentkit_ext.py compile-ts --root path/to/project --file src/main.ts --out-dir dist
+
+This helper uses an existing tsc executable and never installs packages automatically. If tsconfig.json exists, it compiles the project configuration; do not combine project mode with explicit file arguments. Without a config, .ts files use ES2022/ESNext defaults. .tsx requires tsconfig.json so JSX settings are not guessed. Default output directory is dist; confirm runtime/module expectations before running the generated JavaScript. The check option uses no-emit type checking.
+
+### 3. Record who changed what, and which work mode was used
+
+    python3 TOOLS/AgentKit/agentkit_ext.py record-change --root . --actor ai --mode mixed --summary "Add and test environment tooling" --path TOOLS/AgentKit/agentkit_ext.py --path TOOLS/AgentKit/tests/test_agentkit_ext.py
+
+Required values:
+- actor: ai or human, depending on who authored/materially edited the files. If both made distinct changes, add separate records.
+- mode: online if remote services/network were used, offline if only local resources were used, mixed if both.
+- summary and one or more changed paths, each passed as a repeated path argument.
+
+By default, records append to LOGS/change-ledger.jsonl. Review before committing. The PR CI verifies append-only behavior and path coverage. This is a workflow label, not proof of identity and not a replacement for Git history.
+
+Never record raw prompts, conversations, access tokens, private URLs or personal data.
+
+### 4. Static Minecraft add-on audit
+
+    python3 TOOLS/AgentKit/agentkit_ext.py audit-addon /path/to/ReForge_Visuals-3.24.1.mcaddon
+    python3 TOOLS/AgentKit/agentkit_ext.py audit-addon /path/to/addon.mcaddon --json /tmp/addon-audit.json
+
+The audit checks ZIP CRC and member paths, parses JSON, compares BP/RP manifest versions and dependencies, and uses Node --check on JavaScript when Node is present. It does not extract the archive, validate every Minecraft schema or prove runtime behavior. In-world and Content Log checks remain separate.
+
+## Security and limitations
+
+- No privilege escalation, restriction bypass, credential discovery or automatic package installation.
+- Discovered PATH executables are never invoked by the command inventory.
+- fetch-probe performs one read-only git ls-remote attempt and stops on the first error/timeout; it does not clone.
+- Core shell fallback is deliberately reduced and is not feature-equivalent to Python.
+- File and command scans skip common dependency/build directories.
+- Local outputs may contain environment paths; inspect them before publication.
+
+## Tests
+
+    python -m unittest discover -s TOOLS/AgentKit/tests -v
+    python -m py_compile TOOLS/AgentKit/agentkit.py TOOLS/AgentKit/agentkit_ext.py
