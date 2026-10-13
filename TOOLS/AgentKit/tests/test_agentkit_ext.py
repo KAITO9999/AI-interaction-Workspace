@@ -115,5 +115,15 @@ class AgentKitExtensionTests(unittest.TestCase):
             self.assertIn("pack_version_match", result.stderr)
 
 
+    def test_addon_audit_rejects_single_backslash_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive_path = Path(directory) / "unsafe.mcaddon"
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("BP\\manifest.json", "{}")
+            result = run("audit-addon", str(archive_path), "--no-js-check")
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("archive_paths", result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
