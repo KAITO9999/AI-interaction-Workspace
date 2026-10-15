@@ -1,14 +1,19 @@
 # ReForge Visuals — plan
 
-Status: pending validation only. Static archive review is complete and recorded in [CACHE.md](CACHE.md); completed work is not duplicated here.
+Status: static work complete for candidate 3.24.2; target-world and runtime validation pending. Completed static tasks are recorded in [CACHE.md](CACHE.md) and are not duplicated here.
 
-## P1 — In-world smoke test and Content Log
+## P1 — Verify 3.24.2 water tint in-world and inspect Content Log
 
-- **Outcome:** verify the 3.24.1 artifact in a real Bedrock world.
-- **Prerequisite:** test world and intended Bedrock runtime are available.
-- **Checks:** enable Content Log, load the add-on, exercise settings and relevant visual/audio states, and capture errors and reproducible observations.
-- **Complete when:** runtime/version and steps are recorded, Content Log results are preserved, and each remaining issue is either fixed and re-tested or explicitly left open.
-- **Current state:** not run.
+- **Outcome:** confirm that normal biome water gains the intended blue tint without making rivers/oceans/swamps visually wrong.
+- **Prerequisite:** a real Bedrock world on the intended game version and the exact 3.24.2 candidate.
+- **Checks:**
+  - Test with Vibrant Visuals enabled and disabled.
+  - Check default-water biomes (such as plains/forest), river/frozen river, ocean/warm ocean and swamp/mangrove/lush-cave exceptions.
+  - Repeat with the expected subpack/quality tiers where applicable.
+  - Inspect Content Log after pack activation and during water/biome/weather transitions.
+  - Record screenshots or reproducible observations, game/device version and selected subpack.
+- **Complete when:** observations show whether the blue tint is improved and exceptions remain appropriate; Content Log output is recorded; any new failures are triaged and re-tested or left explicitly open.
+- **Current state:** not run; requires in-game runtime.
 
 ## P2 — Performance and multiplayer measurement
 
@@ -21,7 +26,7 @@ Status: pending validation only. Static archive review is complete and recorded 
 ## P3 — Target-environment compatibility
 
 - **Outcome:** verify behavior on the intended target device/runtime.
-- **Checks:** repeat the smoke test and note device-specific API, visual, audio or load issues.
+- **Checks:** repeat P1 and note device-specific API, visual, audio or load issues.
 - **Complete when:** target environment, steps, results and limitations are recorded.
 - **Current state:** not run.
 
