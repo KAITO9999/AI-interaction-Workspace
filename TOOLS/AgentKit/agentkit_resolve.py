@@ -188,9 +188,32 @@ def main() -> int:
         return 0
     selected = report["selected_command"]
     if selected and not args.prefer_fallback:
-        print(f"AVAILABLE: {selected} ({shutil.which(selected)})")
-        print("AgentKit does not guess command arguments. Use --prefer-fallback for the built-in equivalent.")
-        return 0
+        command_args: list[str] | None = None
+        if args.task == "json-check" and selected == "jq":
+            command_args = [selected, "empty", args.target]
+        elif args.task == "search" and args.pattern:
+            command_args = [selected, "-F", "-i", args.pattern, args.target] if selected == "rg" else [selected, "-R", "-n", "-i", "-F", args.pattern, args.target]
+        elif args.task == "find-files" and args.pattern:
+            command_args = [selected, args.pattern, args.target] if selected == "fd" else [selected, args.target, "-iname", f"*{args.pattern}*"]
+        elif args.task == "archive-list":
+            command_args = [selected, "-l", args.target] if selected == "unzip" else [selected, "-tf", args.target]
+        elif args.task == "sha256":
+            command_args = [selected, args.target] if selected == "sha256sum" else [selected, "-a", "256", args.target]
+        if command_args is None:
+            print(f"AVAILABLE: {selected} ({shutil.which(selected)})")
+            print("This task needs additional arguments; provide --pattern where applicable or use --prefer-fallback.")
+            return 2
+        print("RUN:", " ".join(command_args), flush=True)
+        try:
+            result = run(command_args, timeout=args.timeout)
+        except subprocess.TimeoutExpired:
+            print(f"ERROR: command timed out after {args.timeout}s; no automatic retry.", file=sys.stderr)
+            return 124
+        if result.stdout:
+            print(result.stdout, end="" if result.stdout.endswith("\\n") else "\\n")
+        if result.stderr:
+            print(result.stderr, end="" if result.stderr.endswith("\\n") else "\\n", file=sys.stderr)
+        return result.returncode
     if args.install and not selected:
         command = TASKS[args.task]["commands"][0]
         status = try_install(command, args.timeout)
