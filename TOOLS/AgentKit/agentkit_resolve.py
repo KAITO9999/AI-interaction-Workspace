@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Safe, opt-in command resolver with Python standard-library fallbacks."""
 from __future__ import annotations
 
@@ -9,10 +8,8 @@ import os
 import shutil
 import subprocess
 import sys
-import time
 import zipfile
 from pathlib import Path
-from typing import Callable
 
 VERSION = "0.1.0"
 # Task -> preferred external commands, then a Python-native fallback.
@@ -20,18 +17,20 @@ TASKS = {
     "json-check": {"commands": ["jq"], "fallback": "json-check"},
     "search": {"commands": ["rg", "grep"], "fallback": "search"},
     "find-files": {"commands": ["fd", "find"], "fallback": "find-files"},
-    "archive-list": {"commands": ["unzip", "tar"], "fallback": "archive-list"},
+    "archive-list": {"commands": ["7z", "unzip", "tar"], "fallback": "archive-list"},
     "sha256": {"commands": ["sha256sum", "shasum"], "fallback": "sha256"},
 }
 # Package identifiers are intentionally allowlisted; never use sudo or a shell.
 PACKAGES = {
-    "jq": {"brew": "jq", "apt-get": "jq", "dnf": "jq", "pacman": "jq", "winget": "jqlang.jq"},
-    "rg": {"brew": "ripgrep", "apt-get": "ripgrep", "dnf": "ripgrep", "pacman": "ripgrep", "winget": "BurntSushi.ripgrep.MSVC"},
-    "fd": {"brew": "fd", "apt-get": "fd-find", "dnf": "fd-find", "pacman": "fd", "winget": "sharkdp.fd"},
-    "unzip": {"brew": "unzip", "apt-get": "unzip", "dnf": "unzip", "pacman": "unzip", "winget": "GnuWin32.UnZip"},
-    "sha256sum": {"brew": "coreutils", "apt-get": "coreutils", "dnf": "coreutils", "pacman": "coreutils"},
+    "jq": {"brew": "jq", "apt-get": "jq", "dnf": "jq", "pacman": "jq", "winget": "jqlang.jq", "pkg": "jq"},
+    "rg": {"brew": "ripgrep", "apt-get": "ripgrep", "dnf": "ripgrep", "pacman": "ripgrep", "winget": "BurntSushi.ripgrep.MSVC", "pkg": "ripgrep"},
+    "fd": {"brew": "fd", "apt-get": "fd-find", "dnf": "fd-find", "pacman": "fd", "winget": "sharkdp.fd", "pkg": "fd"},
+    "unzip": {"brew": "unzip", "apt-get": "unzip", "dnf": "unzip", "pacman": "unzip", "winget": "GnuWin32.UnZip", "pkg": "unzip"},
+    "sha256sum": {"brew": "coreutils", "apt-get": "coreutils", "dnf": "coreutils", "pacman": "coreutils", "pkg": "coreutils"},
+    "7z": {"brew": "p7zip", "apt-get": "p7zip-full", "dnf": "p7zip", "pacman": "p7zip", "pkg": "p7zip"},
 }
 INSTALLERS = {
+    "pkg": lambda package: ["pkg", "install", "-y", package],
     "brew": lambda package: ["brew", "install", package],
     "apt-get": lambda package: ["apt-get", "install", "-y", package],
     "dnf": lambda package: ["dnf", "install", "-y", package],
@@ -46,7 +45,11 @@ def run(argv: list[str], timeout: int = 30) -> subprocess.CompletedProcess[str]:
 
 
 def available_installers() -> list[str]:
-    return [name for name in INSTALLERS if shutil.which(name)]
+    managers = [name for name in INSTALLERS if shutil.which(name)]
+    # Termux uses pkg; do not mistake unrelated `pkg` commands for its package manager.
+    if not (os.environ.get("TERMUX_VERSION") and "/com.termux/" in os.environ.get("PREFIX", "")):
+        managers = [name for name in managers if name != "pkg"]
+    return managers
 
 
 def resolve(task: str) -> dict[str, object]:
@@ -68,7 +71,10 @@ def fallback(task: str, args: argparse.Namespace) -> int:
         try:
             with path.open("r", encoding="utf-8-sig") as handle:
                 json.load(handle)
-        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        except OSError as exc:
+            print(f"ERROR reading file: {exc}", file=sys.stderr)
+            return 2
+        except (UnicodeError, json.JSONDecodeError) as exc:
             print(f"INVALID JSON: {exc}", file=sys.stderr)
             return 1
         print(f"VALID JSON: {path}")
@@ -187,6 +193,16 @@ def main() -> int:
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
     selected = report["selected_command"]
+    # --install explicitly tries to install the preferred tool even when a less-preferred
+    # alternative (for example `find`) is already available. JSON-report remains read-only.
+    preferred = TASKS[args.task]["commands"][0]
+    if args.install and not args.prefer_fallback and not shutil.which(preferred):
+        install_status = try_install(preferred, args.timeout)
+        if install_status == 0:
+            report = resolve(args.task)
+            selected = report["selected_command"]
+        else:
+            print("Preferred command installation failed; continuing with an available alternative or Python fallback.", file=sys.stderr)
     if selected and not args.prefer_fallback:
         command_args: list[str] | None = None
         if args.task == "json-check" and selected == "jq":
@@ -196,7 +212,7 @@ def main() -> int:
         elif args.task == "find-files" and args.pattern:
             command_args = [selected, args.pattern, args.target] if selected == "fd" else [selected, args.target, "-iname", f"*{args.pattern}*"]
         elif args.task == "archive-list":
-            command_args = [selected, "-l", args.target] if selected == "unzip" else [selected, "-tf", args.target]
+            command_args = [selected, "l", args.target] if selected == "7z" else [selected, "-l", args.target] if selected == "unzip" else [selected, "-tf", args.target]
         elif args.task == "sha256":
             command_args = [selected, args.target] if selected == "sha256sum" else [selected, "-a", "256", args.target]
         if command_args is None:
@@ -210,19 +226,11 @@ def main() -> int:
             print(f"ERROR: command timed out after {args.timeout}s; no automatic retry.", file=sys.stderr)
             return 124
         if result.stdout:
-            print(result.stdout, end="" if result.stdout.endswith("\\n") else "\\n")
+            print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
         if result.stderr:
-            print(result.stderr, end="" if result.stderr.endswith("\\n") else "\\n", file=sys.stderr)
+            print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr)
         return result.returncode
-    if args.install and not selected:
-        command = TASKS[args.task]["commands"][0]
-        status = try_install(command, args.timeout)
-        if status == 0:
-            print("Install succeeded; rerun the intended task explicitly to validate its behavior.")
-            return 0
-        print("Continuing with Python fallback where possible.", file=sys.stderr)
-    else:
-        print("Using Python standard-library fallback.")
+    print("Using Python standard-library fallback.")
     return fallback(args.task, args)
 
 

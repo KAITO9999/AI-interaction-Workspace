@@ -88,5 +88,26 @@ class ResolverTests(unittest.TestCase):
             self.assertNotIn("INSTALL ATTEMPT", result.stdout)
 
 
+    def test_install_opt_in_tries_preferred_tool_before_available_alternative(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bins = root / "bin"
+            bins.mkdir()
+            brew = bins / "brew"
+            brew.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" > \"$CAPTURE_INSTALL\"\nexit 1\n", encoding="utf-8")
+            brew.chmod(0o755)
+            find = bins / "find"
+            find.write_text("#!/bin/sh\necho fake-find-ran\nexit 0\n", encoding="utf-8")
+            find.chmod(0o755)
+            capture = root / "install.txt"
+            env = self.empty_path_env(bins)
+            env["CAPTURE_INSTALL"] = str(capture)
+            result = run("find-files", str(root), "--pattern", "alpha", "--install", env=env)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertIn("install fd", capture.read_text(encoding="utf-8"))
+            self.assertIn("Preferred command installation failed", result.stderr)
+            self.assertIn("fake-find-ran", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
