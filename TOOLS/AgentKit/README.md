@@ -58,7 +58,7 @@ The audit checks ZIP CRC and member paths, parses JSON, compares BP/RP manifest 
 
 ## Security and limitations
 
-- No privilege escalation, restriction bypass, credential discovery or automatic package installation.
+- No privilege escalation, restriction bypass or credential discovery. Package installation is opt-in only through the resolver's explicit `--install` flag.
 - Discovered PATH executables are never invoked by the command inventory.
 - fetch-probe performs one read-only git ls-remote attempt and stops on the first error/timeout; it does not clone.
 - Core shell fallback is deliberately reduced and is not feature-equivalent to Python.
@@ -81,4 +81,8 @@ The audit checks ZIP CRC and member paths, parses JSON, compares BP/RP manifest 
 
 The resolver detects allowlisted commands without executing them. Use `--prefer-fallback` to run the Python standard-library equivalent even if an external command exists. Current fallbacks support JSON validation, text search, file-name search, ZIP listing, and SHA-256 hashing. They are not claimed to be fully compatible with jq, ripgrep, fd, unzip, or platform-specific options.
 
-Package installation is **off by default**. `--install` explicitly permits one bounded installation attempt for a missing, allowlisted command, using an available supported package manager and a fixed package mapping. AgentKit does not invoke a shell or sudo, does not retry a failed install, and verifies the command appears on PATH afterward. Package-manager behavior and permissions vary by operating system; review the printed command before using this option. A successful installation is not proof that the original task worked; rerun and validate the intended operation.
+Package installation is **off by default**. `--install` explicitly permits one bounded attempt to install the preferred command even if a less-preferred alternative exists. Only fixed package mappings are accepted. On Termux, the resolver uses `pkg`; elsewhere it supports detected package managers with known mappings. It does not invoke a shell or sudo, does not retry a failed install, and verifies the command appears on PATH afterward. Package-manager behavior and permissions vary by operating system; review the printed command before using this option. A successful installation is not proof that the original task worked; rerun and validate the intended operation.
+
+### 6. Termux-derived tool candidates
+
+See [TERMUX_TOOL_CANDIDATES.md](TERMUX_TOOL_CANDIDATES.md) for the observed Termux command inventory summary and non-duplicating feature proposals. The resolver also supports 7-Zip for archive listing and Termux's `pkg` package manager when running in a detected Termux environment.
