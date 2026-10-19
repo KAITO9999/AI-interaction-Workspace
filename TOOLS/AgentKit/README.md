@@ -87,16 +87,24 @@ Package installation is **off by default**. `--install` explicitly permits one b
 
 See [TERMUX_TOOL_CANDIDATES.md](TERMUX_TOOL_CANDIDATES.md) for the observed Termux command inventory summary and non-duplicating feature proposals. The resolver also supports 7-Zip for archive listing and Termux's `pkg` package manager when running in a detected Termux environment.
 
-### 6. Discover AI-agent compatibility and tool routes
+### 7. Probe the agent's own execution environment
 
-    python3 TOOLS/AgentKit/agentkit_agents.py
-    python3 TOOLS/AgentKit/agentkit_agents.py --json
-    python3 TOOLS/AgentKit/agentkit_agents.py --agent opencode --json
+    python3 TOOLS/AgentKit/agentkit_env.py
+    python3 TOOLS/AgentKit/agentkit_env.py --json
+    python3 TOOLS/AgentKit/agentkit_env.py --json --active-tests
+    python3 TOOLS/AgentKit/agentkit_env.py --feature system_call_tracing --json
+    python3 TOOLS/AgentKit/agentkit_env.py --json --output /tmp/agentkit-env.json
 
-The report includes profiles for Codex CLI, Claude Code, OpenCode, Cursor, VS Code with Copilot Agent mode, hosted ChatGPT, and generic MCP clients. It maps common capabilities to likely transports and fallbacks.
+This reports the runtime where the script is actually running: OS, architecture, Python, user/UID, Termux/PRoot hints, PATH executables, feature prerequisites, and fallback routes. It is intended to discover execution-environment restrictions—not to identify which AI product is being used.
 
-Detection is intentionally conservative:
-- A CLI found on PATH means only that an executable exists; it does not prove authentication, configuration, MCP connectivity, or model/tool availability.
-- Hosted ChatGPT cannot be detected from Termux's package list or local PATH. A localhost Termux service is not automatically reachable from a hosted agent; use a supported integration or a secured bridge.
-- MCP support and configuration syntax vary by client/version. Follow the installed client's documentation and verify the connection in that client.
-- Capability routes are planning metadata, not an assertion that a tool is already connected or safe to expose. Keep shell execution restricted to allowlisted operations and arguments.
+Feature statuses:
+- \`blocked\`: a required executable is missing.
+- \`detected_unverified\`: prerequisite exists, but permissions or real operation have not been proven.
+- \`available\`: an explicitly requested active probe succeeded.
+- \`degraded\`: an executable exists but its active probe failed.
+
+The optional \`--active-tests\` runs only local bounded tests: launching a tiny Python child process, writing into a temporary directory, and (if present) tracing a tiny child process with \`strace\`. Temporary files are cleaned up. It never contacts the network, installs packages, changes system configuration, or traces arbitrary processes.
+
+The report recommends a fallback for each capability, including Python-based file search/JSON/archive handling, polling in place of file watchers, process metadata logs in place of syscall tracing, and local-only operation when network access is unverified. These fallbacks are not claimed to be semantically identical to the original tools.
+
+Important: this is a capability inventory, not a security sandbox audit. A found command does not prove the agent's outer policy allows it; network client presence does not prove egress; root/container hints do not prove isolation; and a failed \`strace\` child test does not identify the exact kernel or policy restriction. Keep package installation and destructive actions behind explicit approval.
