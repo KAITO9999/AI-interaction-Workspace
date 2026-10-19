@@ -69,3 +69,16 @@ The audit checks ZIP CRC and member paths, parses JSON, compares BP/RP manifest 
 
     python -m unittest discover -s TOOLS/AgentKit/tests -v
     python -m py_compile TOOLS/AgentKit/agentkit.py TOOLS/AgentKit/agentkit_ext.py
+
+### 5. Resolve a missing command or use a Python fallback
+
+    python3 TOOLS/AgentKit/agentkit_resolve.py json-check path/to/data.json
+    python3 TOOLS/AgentKit/agentkit_resolve.py search path/to/project --pattern TODO
+    python3 TOOLS/AgentKit/agentkit_resolve.py find-files path/to/project --pattern config
+    python3 TOOLS/AgentKit/agentkit_resolve.py archive-list path/to/archive.zip
+    python3 TOOLS/AgentKit/agentkit_resolve.py sha256 path/to/file
+    python3 TOOLS/AgentKit/agentkit_resolve.py json-check --json-report
+
+The resolver detects allowlisted commands without executing them. Use `--prefer-fallback` to run the Python standard-library equivalent even if an external command exists. Current fallbacks support JSON validation, text search, file-name search, ZIP listing, and SHA-256 hashing. They are not claimed to be fully compatible with jq, ripgrep, fd, unzip, or platform-specific options.
+
+Package installation is **off by default**. `--install` explicitly permits one bounded installation attempt for a missing, allowlisted command, using an available supported package manager and a fixed package mapping. AgentKit does not invoke a shell or sudo, does not retry a failed install, and verifies the command appears on PATH afterward. Package-manager behavior and permissions vary by operating system; review the printed command before using this option. A successful installation is not proof that the original task worked; rerun and validate the intended operation.
