@@ -136,15 +136,16 @@ def fallback(task: str, args: argparse.Namespace) -> int:
 
 
 def try_install(command: str, timeout: int) -> int:
+    is_root = getattr(os, "geteuid", lambda: -1)() == 0
     package_map = PACKAGES.get(command, {})
     for manager in available_installers():
         package = package_map.get(manager)
         if not package:
             continue
-        if manager == "apt-get" and os.geteuid() != 0:
+        if manager == "apt-get" and not is_root:
             print("SKIP apt-get: run is not elevated; AgentKit never invokes sudo.", file=sys.stderr)
             continue
-        if manager == "pacman" and os.geteuid() != 0:
+        if manager == "pacman" and not is_root:
             print("SKIP pacman: run is not elevated; AgentKit never invokes sudo.", file=sys.stderr)
             continue
         argv = INSTALLERS[manager](package)
