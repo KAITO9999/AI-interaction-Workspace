@@ -9,10 +9,8 @@ import os
 import shutil
 import subprocess
 import sys
-import time
 import zipfile
 from pathlib import Path
-from typing import Callable
 
 VERSION = "0.1.0"
 # Task -> preferred external commands, then a Python-native fallback.
@@ -68,7 +66,10 @@ def fallback(task: str, args: argparse.Namespace) -> int:
         try:
             with path.open("r", encoding="utf-8-sig") as handle:
                 json.load(handle)
-        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        except OSError as exc:
+            print(f"ERROR reading file: {exc}", file=sys.stderr)
+            return 2
+        except (UnicodeError, json.JSONDecodeError) as exc:
             print(f"INVALID JSON: {exc}", file=sys.stderr)
             return 1
         print(f"VALID JSON: {path}")
