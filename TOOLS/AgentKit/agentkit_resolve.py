@@ -211,9 +211,9 @@ def main() -> int:
             print(f"ERROR: command timed out after {args.timeout}s; no automatic retry.", file=sys.stderr)
             return 124
         if result.stdout:
-            print(result.stdout, end="" if result.stdout.endswith("\\n") else "\\n")
+            print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
         if result.stderr:
-            print(result.stderr, end="" if result.stderr.endswith("\\n") else "\\n", file=sys.stderr)
+            print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr)
         return result.returncode
     if args.install and not selected:
         command = TASKS[args.task]["commands"][0]
