@@ -81,7 +81,7 @@ AGENTS: dict[str, dict[str, Any]] = {
 
 CAPABILITY_ROUTES: dict[str, dict[str, Any]] = {
     "termux-command-execution": {
-        "requires": ["termux-mcp"],
+        "requires_any": ["termux-mcp", "termux-native-mcp"],
         "preferred_transports": ["mcp-stdio", "mcp-http"],
         "fallback": "Use a narrowly scoped local CLI wrapper or AgentKit subprocess API",
         "safety": "Do not expose unrestricted shell execution to remote clients; allowlist tools and arguments.",
@@ -120,12 +120,32 @@ def discover(command_lookup=shutil.which) -> dict[str, Any]:
         else:
             status = "cli_detected" if found else "not_detected"
         profiles.append({"id": key, **spec, "detected_commands": found, "status": status})
+    route_status = {}
+    for key, route in CAPABILITY_ROUTES.items():
+        required_all = route.get("requires", [])
+        required_any = route.get("requires_any", [])
+        required = list(dict.fromkeys(required_all + required_any))
+        available = {name: command_lookup(name) for name in required}
+        missing_all = [name for name in required_all if not available.get(name)]
+        has_any = not required_any or any(available.get(name) for name in required_any)
+        if missing_all or not has_any:
+            status = "missing"
+        elif all(available.get(name) for name in required_all) and (not required_any or any(available.get(name) for name in required_any)):
+            status = "available"
+        else:
+            status = "partial"
+        route_status[key] = {
+            **route,
+            "status": status,
+            "detected_commands": [{"command": name, "path": path} for name, path in available.items() if path],
+            "missing_required_commands": missing_all + ([] if has_any else required_any),
+        }
     return {
         "schema_version": 1,
         "version": VERSION,
         "detection_scope": "local executable presence only; configuration/authentication/connectivity are not proven",
         "agents": profiles,
-        "capability_routes": CAPABILITY_ROUTES,
+        "capability_routes": route_status,
     }
 
 
