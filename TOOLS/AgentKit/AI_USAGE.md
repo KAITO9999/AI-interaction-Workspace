@@ -46,3 +46,9 @@ A script running in Linux cannot assume it can read ChatGPT history, connector m
 - ctx-forge: https://github.com/sylvester-francis/ctx-forge — AI context assembly and code-range workflows. Evaluate it for context selection instead of duplicating its capabilities.
 
 These are reference candidates, not vendored dependencies. Check the current repository license, release/version and target-environment compatibility before adoption or copying.
+## Tool resolver and installation safety
+
+- The resolver's built-in substitutes are task-specific and are not drop-in CLI compatibility layers.
+- Installation is disabled unless `--install` is explicitly supplied; only fixed package mappings and supported package managers are allowed.
+- Never add automatic retries, shell interpolation, privilege escalation, or unreviewed arbitrary package names.
+- After an install attempt, verify the executable and rerun a bounded task-specific test. Report install success separately from task success.
