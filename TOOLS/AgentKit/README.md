@@ -86,3 +86,17 @@ Package installation is **off by default**. `--install` explicitly permits one b
 ### 6. Termux-derived tool candidates
 
 See [TERMUX_TOOL_CANDIDATES.md](TERMUX_TOOL_CANDIDATES.md) for the observed Termux command inventory summary and non-duplicating feature proposals. The resolver also supports 7-Zip for archive listing and Termux's `pkg` package manager when running in a detected Termux environment.
+
+### 6. Discover AI-agent compatibility and tool routes
+
+    python3 TOOLS/AgentKit/agentkit_agents.py
+    python3 TOOLS/AgentKit/agentkit_agents.py --json
+    python3 TOOLS/AgentKit/agentkit_agents.py --agent opencode --json
+
+The report includes profiles for Codex CLI, Claude Code, OpenCode, Cursor, VS Code with Copilot Agent mode, hosted ChatGPT, and generic MCP clients. It maps common capabilities to likely transports and fallbacks.
+
+Detection is intentionally conservative:
+- A CLI found on PATH means only that an executable exists; it does not prove authentication, configuration, MCP connectivity, or model/tool availability.
+- Hosted ChatGPT cannot be detected from Termux's package list or local PATH. A localhost Termux service is not automatically reachable from a hosted agent; use a supported integration or a secured bridge.
+- MCP support and configuration syntax vary by client/version. Follow the installed client's documentation and verify the connection in that client.
+- Capability routes are planning metadata, not an assertion that a tool is already connected or safe to expose. Keep shell execution restricted to allowlisted operations and arguments.
