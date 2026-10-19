@@ -22,7 +22,7 @@ class EnvironmentProbeTests(unittest.TestCase):
         report = agentkit_env.inspect_environment()
         route = report["features"]["network_access"]
         self.assertIn(route["status"], {"detected_unverified", "blocked"})
-        self.assertIn("never tested", route["reason"])
+        self.assertIn("not tested", route["reason"])
 
     def test_active_probes_are_local_and_report_subprocess_write(self):
         report = agentkit_env.inspect_environment(active_tests=True)
