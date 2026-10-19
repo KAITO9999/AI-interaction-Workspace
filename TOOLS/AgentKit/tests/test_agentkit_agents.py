@@ -40,6 +40,16 @@ class AgentDiscoveryTests(unittest.TestCase):
             self.assertIn("mcp-stdio", by_id[key]["transports"])
             self.assertTrue(by_id[key]["verification_hint"])
 
+    def test_capability_routes_report_detected_and_missing_commands(self):
+        report = agentkit_agents.discover(
+            lambda name: "/fake/bin/" + name if name in {"rg", "strace"} else None
+        )
+        routes = report["capability_routes"]
+        self.assertEqual(routes["file-search"]["status"], "available")
+        self.assertEqual(routes["process-tracing"]["status"], "available")
+        self.assertEqual(routes["json-processing"]["status"], "missing")
+        self.assertIn("jq", routes["json-processing"]["missing_required_commands"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
