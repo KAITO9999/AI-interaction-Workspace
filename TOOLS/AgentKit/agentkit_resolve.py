@@ -17,7 +17,7 @@ from typing import Callable
 VERSION = "0.1.0"
 # Task -> preferred external commands, then a Python-native fallback.
 TASKS = {
-    "json-check": {"commands": ["jq", "python3", "python"], "fallback": "json-check"},
+    "json-check": {"commands": ["jq"], "fallback": "json-check"},
     "search": {"commands": ["rg", "grep"], "fallback": "search"},
     "find-files": {"commands": ["fd", "find"], "fallback": "find-files"},
     "archive-list": {"commands": ["unzip", "tar"], "fallback": "archive-list"},
@@ -27,7 +27,7 @@ TASKS = {
 PACKAGES = {
     "jq": {"brew": "jq", "apt-get": "jq", "dnf": "jq", "pacman": "jq", "winget": "jqlang.jq"},
     "rg": {"brew": "ripgrep", "apt-get": "ripgrep", "dnf": "ripgrep", "pacman": "ripgrep", "winget": "BurntSushi.ripgrep.MSVC"},
-    "fd": {"brew": "fd", "apt-get": "fd-find", "dnf": "fd-find", "pacman": "fd", "winget": " sharkdp.fd"},
+    "fd": {"brew": "fd", "apt-get": "fd-find", "dnf": "fd-find", "pacman": "fd", "winget": "sharkdp.fd"},
     "unzip": {"brew": "unzip", "apt-get": "unzip", "dnf": "unzip", "pacman": "unzip", "winget": "GnuWin32.UnZip"},
     "sha256sum": {"brew": "coreutils", "apt-get": "coreutils", "dnf": "coreutils", "pacman": "coreutils"},
 }
