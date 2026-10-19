@@ -68,7 +68,7 @@ The audit checks ZIP CRC and member paths, parses JSON, compares BP/RP manifest 
 ## Tests
 
     python -m unittest discover -s TOOLS/AgentKit/tests -v
-    python -m py_compile TOOLS/AgentKit/agentkit.py TOOLS/AgentKit/agentkit_ext.py
+    python -m py_compile TOOLS/AgentKit/agentkit.py TOOLS/AgentKit/agentkit_ext.py TOOLS/AgentKit/agentkit_resolve.py
 
 ### 5. Resolve a missing command or use a Python fallback
 
