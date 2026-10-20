@@ -55,6 +55,15 @@
 - [ ] Add a deterministic evaluation/result schema mapping acceptance criteria to test IDs, expected/actual results, artifacts and limitations.
 - [ ] Add optional separately named model-review routing with scoped context packets and evidence-based finding verification.
 - [ ] Add security/fault-injection tests for prompt injection, path traversal, unknown tools, output flooding, timeouts, interrupted operations and uncertain external side effects.
+- [x] Add initial safe capability inventory for known high-impact tool CLIs; discovery does not execute commands or install packages.
+- [x] Add fixed-argument, bounded version probes for discovered allowlisted tools and JSON/Markdown reports with source URLs.
+- [x] Add unit tests for no-execution discovery, fixed argv, timeout handling, bounded output and report provenance.
+- [ ] Expand discovery to verify browser binaries, MCP configuration and more language-specific test runners.
+- [ ] Add a Playwright adapter for approved browser exploration, screenshots/traces and repeatable UI regression tests; keep consequential actions approval-gated.
+- [ ] Add workspace-scoped execution/patch adapter with path containment, command policy, timeout/output limits, postcondition checks and provenance records.
+- [ ] Add a deterministic evaluation/result schema mapping acceptance criteria to test IDs, expected/actual results, artifacts and limitations.
+- [ ] Add optional separately named model-review routing with scoped context packets and evidence-based finding verification.
+- [ ] Add security/fault-injection tests for prompt injection, path traversal, unknown tools, output flooding, timeouts, interrupted operations and uncertain external side effects.
 - [x] Core environment probe and reduced POSIX shell fallback.
 - [x] Inventory actual external executables in PATH without executing discovered tools.
 - [x] Wrap installed tsc for TypeScript build and no-emit check.
