@@ -1,7 +1,7 @@
 # Workspace state
 
 Status: GitHub is the public collaboration entry point; the GitLab source remains unchanged.  
-Last updated: 2026-10-15
+Last updated: 2026-10-21
 
 ## Verified
 
@@ -12,7 +12,8 @@ Last updated: 2026-10-15
 - A local ReForge Visuals 3.24.2 candidate was generated from the supplied 3.24.1 artifact. Full static audit on a clean extraction reported 0 findings, and 8 regression tests passed. The audit report and candidate are handoff files, not committed binary assets.
 - Candidate static audit: 1,149 JSON files parsed with duplicate-key detection; 12 JavaScript files syntax/import checked; 513 fog IDs and 338 fog references checked; water definitions/schema checked across all six subpacks; 12 OGG and 9 PNG assets checked; ZIP CRC/path checks passed.
 - The candidate includes a water-tint adjustment and statically identified corrections; see [ReForge cache](../PROJECTS/ReForge-Visuals/CACHE.md) and [active validation handoff](../PROJECTS/ReForge-Visuals/IN_PROGRESS.md).
-- AgentKit extensions are implemented for PATH executable inventory, tsc-based TypeScript compilation, append-only actor/mode provenance, and static mcaddon/mcpack audit.
+- AgentKit extensions are implemented for PATH executable inventory, tsc-based TypeScript compilation, append-only actor/mode provenance, static mcaddon/mcpack audit, safe command resolution, and smartphone profile compatibility preflight.
+- Smartphone profile budgets are 4/8/12/16 GB; low-end defaults to Android 11/API 30, mid-end to Android 15/API 35, and higher tiers have no default Android-version target. See [AgentKit smartphone profile docs](../TOOLS/AgentKit/MOBILE_TESTING.md).
 - Pull-request CI is configured to reject missing provenance entries, rewritten ledger history and changed paths not covered by records.
 
 ## Not implemented / not verified
@@ -22,6 +23,7 @@ Last updated: 2026-10-15
 - Runtime frame/tick performance or multiplayer-load measurements have not been performed.
 - TypeScript compilation against representative real projects with their own tsconfig.json remains untested; automated tests use a stub compiler for invocation.
 - Termux and other target-device smoke tests remain pending.
+- AgentKit smartphone profiles have only static preflight logic; emulator/physical-device tests and actual CPU/GPU/frame-time/memory/thermal measurements remain pending.
 - Full feature parity between the core Python CLI and reduced shell fallback remains unverified.
 - Automatic GitLab to GitHub synchronization is not configured. GitLab has not been modified.
 - Provenance records validate declared metadata and changed-path coverage, not cryptographic identity.
