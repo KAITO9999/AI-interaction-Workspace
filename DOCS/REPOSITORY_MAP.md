@@ -17,6 +17,7 @@
 | [PROJECTS/ExecutorPlus/IN_PROGRESS.md](../PROJECTS/ExecutorPlus/IN_PROGRESS.md) | Executor++ active work/handoff | Current investigation and next action |
 | [TOOLS/AgentKit/README.md](../TOOLS/AgentKit/README.md) | Environment/tool probing | Core CLI and extension CLI |
 | [TOOLS/AgentKit/AI_USAGE.md](../TOOLS/AgentKit/AI_USAGE.md) | Selecting tool routes | Probe tools before creating substitutes |
+| [TOOLS/AgentKit/AGENT_CAPABILITY_TOOLS.md](../TOOLS/AgentKit/AGENT_CAPABILITY_TOOLS.md) | Improving agent execution and verification | Sourced tool research and integration plan |
 | [DOCS/SPACE_CLASSIFICATION.md](SPACE_CLASSIFICATION.md) | Handling data | Public/private boundaries |
 | [DOCS/GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) | Publishing changes | Branch, PR and CI procedure |
 | [DOCS/GITLAB_PARITY_AUDIT.md](GITLAB_PARITY_AUDIT.md) | Migration/source comparison | Mapping and intentional omissions |
