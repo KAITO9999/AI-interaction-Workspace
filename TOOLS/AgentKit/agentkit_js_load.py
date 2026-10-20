@@ -89,6 +89,14 @@ def append_jsonl(path: Path, record: dict) -> None:
     with path.open("a", encoding="utf-8") as stream:
         stream.write(json.dumps(record, ensure_ascii=False) + "\n")
 
+def input_file_info(path: Path | None) -> dict | None:
+    if path is None:
+        return None
+    try:
+        return {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+    except OSError as exc:
+        return {"path": str(path), "sha256": None, "read_error": f"{type(exc).__name__}: {exc}"}
+
 def find_js_files(root: Path, explicit: list[str]) -> list[Path]:
     if explicit:
         found = []
@@ -476,8 +484,8 @@ def main() -> int:
     report = {"tool": "agentkit_js_load", "version": VERSION, "generated_utc": datetime.now(timezone.utc).isoformat(),
               "root": str(root), "profile": profile, "files_scanned": len(metrics), "metrics": metrics,
               "inputs": {
-                  "workload_json": {"path": str(workload_path), "sha256": hashlib.sha256(workload_path.read_bytes()).hexdigest()} if workload_path else None,
-                  "calibration_json": {"path": str(calibration_path), "sha256": hashlib.sha256(calibration_path.read_bytes()).hexdigest()} if calibration_path else None,
+                  "workload_json": input_file_info(workload_path),
+                  "calibration_json": input_file_info(calibration_path),
               },
               "workload_scenario": workload,
               "findings": sorted(findings, key=lambda x: (x["path"], x["line"], x["title"])),
@@ -489,13 +497,17 @@ def main() -> int:
                                "Clock scaling is a linear assumption only when explicitly enabled; it may not hold across CPU architectures or JS engines.",
                                "Static call-site findings do not prove dynamic call counts or dead code.",
                                "Runtime estimate remains unavailable rather than inventing precision when workload bounds or calibrated rates are missing."]}
-    for item in report["findings"]:
-        append_jsonl(log, {"timestamp_utc": report["generated_utc"], "record_type": "finding",
-                           "profile": profile, **item})
-    append_jsonl(log, {"timestamp_utc": report["generated_utc"], "record_type": "summary",
-                       "tool": "agentkit_js_load", "profile": profile, "files_scanned": len(metrics),
-                       "findings_count": len(findings), "runtime_estimate": runtime_estimate,
-                       "input_hashes": report["inputs"]})
+    try:
+        for item in report["findings"]:
+            append_jsonl(log, {"timestamp_utc": report["generated_utc"], "record_type": "finding",
+                               "profile": profile, **item})
+        append_jsonl(log, {"timestamp_utc": report["generated_utc"], "record_type": "summary",
+                           "tool": "agentkit_js_load", "profile": profile, "files_scanned": len(metrics),
+                           "findings_count": len(findings), "runtime_estimate": runtime_estimate,
+                           "input_hashes": report["inputs"]})
+    except OSError as exc:
+        print(f"ERROR: could not append analysis log: {exc}", file=sys.stderr)
+        return 2
     report["log"] = str(log)
     if template_path:
         report["workload_template"] = str(template_path)
