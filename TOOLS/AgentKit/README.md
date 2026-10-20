@@ -211,12 +211,16 @@ Calibration file example (rates and latency ranges must be measured on the selec
       "samples": 10,
       "cpu_ops_per_second": [1000000, 2000000],
       "memory_bytes_per_second": [10000000, 20000000],
-      "api_latency_ms": {"fetch": [20, 250]}
+      "api_latency_ms": {"fetch": [20, 250]},
+      "reference_clock_ghz": 3.0,
+      "allow_linear_clock_scaling": false,
+      "reference_memory_bandwidth_gbps": 10,
+      "allow_linear_memory_bandwidth_scaling": false
     }
   }
 }
 ```
 
-The estimator sums the calibrated CPU, memory-transfer, and API components. API count is divided into batches using the explicit concurrency value. The total is a serial-component estimate; it does not model arbitrary overlap between CPU work and network waits. The confidence label reflects the number of calibration samples supplied, not independent verification of their quality. Static source findings and workload JSON are separate evidence: the analyzer does not silently infer loop counts, input sizes, or function invocation counts from source text.
+The estimator sums the calibrated CPU, memory-transfer, and API components. API count is divided into batches using the explicit concurrency value. The total is a serial-component estimate; it does not model arbitrary overlap between CPU work and network waits. Optional clock and memory-bandwidth scaling is applied only when the calibration explicitly sets the corresponding allow_linear_* flag and provides reference specifications. Core count is recorded but is not multiplied into main-thread JavaScript throughput. A working_set_bytes operation is checked against --memory-gb when supplied; exceeding the specified total memory makes the estimate unavailable. The confidence label reflects the number of calibration samples supplied, not independent verification of their quality. Static source findings and workload JSON are separate evidence: the analyzer does not silently infer loop counts, input sizes, or function invocation counts from source text.
 
 For design rationale, see the V8 team's [real-world performance methodology](https://v8.dev/blog/real-world-performance), [JavaScript execution costs](https://v8.dev/blog/cost-of-javascript-2019), and [benchmark limitations](https://v8.dev/blog/retiring-octane). Those sources emphasize representative workload measurement and show why a single synthetic benchmark or clock rate is not a universal runtime predictor. The follow-on estimator should accumulate bounded operation counts and API-specific cost ranges, with each coefficient traceable to a target-runtime benchmark or published evidence.
