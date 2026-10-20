@@ -310,6 +310,7 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
     if missing:
         return unavailable_estimate("Calibration does not contain valid measured ranges for every workload category.", sorted(set(missing)))
     cpu_low = cpu_high = memory_low = memory_high = api_low = api_high = 0.0
+    api_operation_costs = []
     for operation in workload["operations"]:
         count = float(operation["count"])
         if operation["kind"] == "cpu_ops" and count:
@@ -323,8 +324,13 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
         elif operation["kind"] == "api" and count:
             latency_low, latency_high = api_rates[operation["name"]]
             batches = math.ceil(count / operation["concurrency"])
-            api_low += batches * float(latency_low)
-            api_high += batches * float(latency_high)
+            op_low = batches * float(latency_low)
+            op_high = batches * float(latency_high)
+            api_low += op_low
+            api_high += op_high
+            api_operation_costs.append({"name": operation["name"], "count": int(count),
+                                        "concurrency": operation["concurrency"], "serialized_batches": batches,
+                                        "accumulated_wait_ms": [round(op_low, 3), round(op_high, 3)]})
     low = round(cpu_low + memory_low + api_low, 3)
     high = round(cpu_high + memory_high + api_high, 3)
     samples = profile_data.get("samples", 0)
@@ -334,7 +340,7 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
             "assumption": "Serial component sum; API concurrency is represented by explicit batches. CPU and memory ranges must be measured on the selected target runtime.",
             "components": {"cpu_ms": [round(cpu_low, 3), round(cpu_high, 3)],
                            "memory_transfer_ms": [round(memory_low, 3), round(memory_high, 3)],
-                           "api_wait_ms": [round(api_low, 3), round(api_high, 3)]},
+                           "api_wait_ms": [round(api_low, 3), round(api_high, 3)], "api_operations": api_operation_costs},
             "required_inputs": [], "scaling_adjustments": scaling_adjustments}
 
 def main() -> int:
@@ -386,6 +392,26 @@ def main() -> int:
         runtime_estimate["calibration_loaded"] = True
     if workload is not None:
         runtime_estimate["workload_loaded"] = True
+    for api_operation in runtime_estimate.get("components", {}).get("api_operations", []):
+        if api_operation["count"] > api_operation["concurrency"]:
+            wait_high = api_operation["accumulated_wait_ms"][1]
+            findings.append({
+                "path": "<workload-json>", "line": 1, "category": "API_LOAD",
+                "priority": "HIGH" if wait_high >= 1000 else "MEDIUM",
+                "title": "Multiple API batches in workload scenario",
+                "detail": f"{api_operation['name']}: {api_operation['count']} call(s) at concurrency {api_operation['concurrency']} require {api_operation['serialized_batches']} latency batch(es); calibrated accumulated wait range is {api_operation['accumulated_wait_ms'][0]:.3f}–{wait_high:.3f} ms. Consider batching or bounded concurrency only if API semantics, rate limits, and ordering allow.",
+                "detection_confidence": "MEDIUM", "review_recommended": True,
+                "evidence": "Derived from explicit workload counts and target-runtime latency calibration, not inferred from source text."
+            })
+    cpu_component = runtime_estimate.get("components", {}).get("cpu_ms")
+    if cpu_component and cpu_component[1] >= 50 and any(token in runtime_estimate.get("target_runtime", "").lower() for token in ("browser", "chrome", "firefox", "safari", "web")):
+        findings.append({
+            "path": "<workload-json>", "line": 1, "category": "PERFORMANCE", "priority": "HIGH",
+            "title": "Estimated CPU phase may become a long task",
+            "detail": f"Calibrated CPU component upper bound is {cpu_component[1]:.3f} ms. If this work executes as one browser main-thread task, it exceeds the 50 ms Long Tasks threshold and may delay input; split/yield only where semantics allow.",
+            "detection_confidence": "MEDIUM", "review_recommended": True,
+            "evidence": "Chrome Long Tasks threshold: https://developer.chrome.com/docs/web-platform/long-animation-frames"
+        })
     report = {"tool": "agentkit_js_load", "version": VERSION, "generated_utc": datetime.now(timezone.utc).isoformat(),
               "root": str(root), "profile": profile, "files_scanned": len(metrics), "metrics": metrics,
               "findings": sorted(findings, key=lambda x: (x["path"], x["line"], x["title"])),
