@@ -22,7 +22,7 @@ EXTENSIONS = {
     ".sql", ".yaml", ".yml", ".toml", ".json", ".xml", ".html", ".css", ".scss",
 }
 SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "dist", "build", "target", "__pycache__", ".next", ".agentkit-logs"}
-COMMENT_RE = re.compile(r"^\s*(#|//|/\*|<!--|--)")
+COMMENT_RE = re.compile(r"^\s*(#|//|/\*|\*|<!--|--)")
 
 def mask_comments_and_strings(source: str, suffix: str) -> tuple[str, set[int]]:
     """Mask comments and string literals without changing line numbers or code positions."""
