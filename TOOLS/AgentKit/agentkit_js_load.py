@@ -418,22 +418,31 @@ def main() -> int:
         })
     report = {"tool": "agentkit_js_load", "version": VERSION, "generated_utc": datetime.now(timezone.utc).isoformat(),
               "root": str(root), "profile": profile, "files_scanned": len(metrics), "metrics": metrics,
+              "inputs": {
+                  "workload_json": {"path": str(workload_path), "sha256": hashlib.sha256(workload_path.read_bytes()).hexdigest()} if workload_path else None,
+                  "calibration_json": {"path": str(calibration_path), "sha256": hashlib.sha256(calibration_path.read_bytes()).hexdigest()} if calibration_path else None,
+              },
+              "workload_scenario": workload,
               "findings": sorted(findings, key=lambda x: (x["path"], x["line"], x["title"])),
               "runtime_estimate": runtime_estimate,
               "model_policy": ["No host environment discovery or automatic target inference.",
                                "Tier names are labels, not hidden performance multipliers.",
                                "Clock and bandwidth affect rates only when the calibration explicitly authorizes a scaling model.",
                                "Core count is not multiplied into main-thread JavaScript throughput; worker/parallel execution needs a separate workload model.",
-                               "A clock rate is not a reliable substitute for engine-specific throughput benchmarks.",
+                               "Clock scaling is a linear assumption only when explicitly enabled; it may not hold across CPU architectures or JS engines.",
                                "Static call-site findings do not prove dynamic call counts or dead code.",
                                "Runtime estimate remains unavailable rather than inventing precision when workload bounds or calibrated rates are missing."]}
     log_dir = Path(args.log_dir)
     if not log_dir.is_absolute():
         log_dir = root / log_dir
     log = log_dir / "js-load-analysis.jsonl"
-    append_jsonl(log, {"timestamp_utc": report["generated_utc"], "tool": "agentkit_js_load",
-                       "profile": profile, "files_scanned": len(metrics), "findings_count": len(findings),
-                       "runtime_estimate": runtime_estimate})
+    for item in report["findings"]:
+        append_jsonl(log, {"timestamp_utc": report["generated_utc"], "record_type": "finding",
+                           "profile": profile, **item})
+    append_jsonl(log, {"timestamp_utc": report["generated_utc"], "record_type": "summary",
+                       "tool": "agentkit_js_load", "profile": profile, "files_scanned": len(metrics),
+                       "findings_count": len(findings), "runtime_estimate": runtime_estimate,
+                       "input_hashes": report["inputs"]})
     report["log"] = str(log)
     if args.json_path:
         output = Path(args.json_path)
