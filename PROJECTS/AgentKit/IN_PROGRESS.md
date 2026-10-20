@@ -1,12 +1,12 @@
 # AgentKit — editing / handoff
 
-Current status: implementation is on branch `work/agentkit-mobile-profiles`; PR #13 is open. The follow-up change adds explicit environment selection, per-tool help, and runtime-only compatibility warnings; CI validation is pending. Real Android runtime testing remains pending.
+Current status: smartphone-profile PR #13 is merged. Follow-up changes are on branch `work/agentkit-mobile-profiles` in PR #14; CI validation for the follow-up is not yet confirmed. Real Android runtime testing remains pending.
 
 ## Active work
 
 ### AK-CLI-002 — Explicit environment selection and tool help
 
-- **Status:** implementation drafted; CI pending
+- **Status:** implementation drafted; CI pending; PR #14 open
 - **Actor:** AI
 - **Work mode:** online (GitHub connector used to inspect and update the branch)
 - **Scope:** add an explicit execution-environment override to the resolver; document that it does not emulate another OS; prevent installs when an explicit environment conflicts with the current runtime; emit a compatibility warning only when a non-preferred external command or Python substitute actually runs; improve per-tool help and regression tests.
