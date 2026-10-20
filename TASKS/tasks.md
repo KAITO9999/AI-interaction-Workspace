@@ -26,6 +26,14 @@
 - [ ] Require source URLs and source dates for every factual model claim, including capabilities, limits, benchmarks, context windows, modalities, availability, and pricing; preserve uncertainty and conflicting evidence.
 - [ ] Add a named second-model review path and structured AI self-audit for omissions, dependencies, inconsistencies, security risks, and acceptance evidence; findings require evidence and must not be treated as ground truth.
 
+- [ ] Implement AgentKit capability inventory for Playwright CLI/MCP/Test, browser runtime, shell/sandbox, language test runners and optional agent SDKs; discovery must not execute unknown binaries.
+- [ ] Add bounded version/help/smoke probes and a structured JSON/Markdown capability report with observed facts, source URLs, confidence and unknowns.
+- [ ] Add a Playwright adapter for approved browser exploration, screenshots/traces and repeatable UI regression tests; keep consequential actions approval-gated.
+- [ ] Add workspace-scoped execution/patch adapter with path containment, command policy, timeout/output limits, postcondition checks and provenance records.
+- [ ] Add a deterministic evaluation/result schema mapping acceptance criteria to test IDs, expected/actual results, artifacts and limitations.
+- [ ] Add optional separately named model-review routing with scoped context packets and evidence-based finding verification.
+- [ ] Add security/fault-injection tests for prompt injection, path traversal, unknown tools, output flooding, timeouts, interrupted operations and uncertain external side effects.
+
 ## Workspace project format and prompt routing
 
 - [x] Define `WORK_MODELS.md`, `PLAN.md`, `CACHE.md` and `IN_PROGRESS.md` as the canonical project record files.
