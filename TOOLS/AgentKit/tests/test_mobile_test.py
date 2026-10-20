@@ -69,7 +69,7 @@ class MobileTestPreflightTests(unittest.TestCase):
             self.make_project(Path(directory), None)
             result = run("--root", directory, "--profile", "low-end", "--min-sdk", "23")
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-            self.assertIn("status=eligible", result.stdout)
+            self.assertIn("eligible | Android 11", result.stdout)
 
     def test_non_android_project_is_reported_without_claiming_compatibility(self):
         with tempfile.TemporaryDirectory() as directory:
