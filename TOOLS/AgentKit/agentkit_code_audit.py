@@ -52,7 +52,7 @@ def mask_comments_and_strings(source: str, suffix: str) -> tuple[str, set[int]]:
     line_prefix_code = False
     while i < len(chars):
         ch = chars[i]
-        if ch == "\\n":
+        if ch == "\n":
             if current_line in comment_chars and not line_prefix_code:
                 line_comment_only.add(current_line)
             current_line += 1
@@ -65,24 +65,24 @@ def mask_comments_and_strings(source: str, suffix: str) -> tuple[str, set[int]]:
         if block_end:
             if source.startswith(block_end, i):
                 for j in range(i, i + len(block_end)):
-                    if chars[j] != "\\n": chars[j] = " "
+                    if chars[j] != "\n": chars[j] = " "
                 i += len(block_end)
                 block_end = None
                 continue
-            if ch != "\\n":
+            if ch != "\n":
                 comment_chars.add(current_line)
                 chars[i] = " "
             i += 1
             continue
         if quote:
-            if ch != "\\n": chars[i] = " "
+            if ch != "\n": chars[i] = " "
             if escaped:
                 escaped = False
-            elif ch == "\\\\":
+            elif ch == "\\":
                 escaped = True
             elif triple and source.startswith(quote * 3, i):
                 for j in range(i, min(i + 3, len(chars))):
-                    if chars[j] != "\\n": chars[j] = " "
+                    if chars[j] != "\n": chars[j] = " "
                 i += 3
                 quote = None
                 triple = False
@@ -96,7 +96,7 @@ def mask_comments_and_strings(source: str, suffix: str) -> tuple[str, set[int]]:
             if source.startswith(opener, i):
                 block_end = closer
                 for j in range(i, i + len(opener)):
-                    if chars[j] != "\\n": chars[j] = " "
+                    if chars[j] != "\n": chars[j] = " "
                 comment_chars.add(current_line)
                 i += len(opener)
                 started = True
@@ -114,7 +114,7 @@ def mask_comments_and_strings(source: str, suffix: str) -> tuple[str, set[int]]:
         if suffix in {".py", ".pyi"} and ch in {"'", '"'} and source.startswith(ch * 3, i):
             quote, triple = ch, True
             for j in range(i, min(i + 3, len(chars))):
-                if chars[j] != "\\n": chars[j] = " "
+                if chars[j] != "\n": chars[j] = " "
             i += 3
             continue
         if ch in {"'", '"', "`"}:
