@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Probe HTTPS HEAD and bounded GET routes; does not install or execute downloads."""
-import argparse,json,sys,urllib.request,urllib.error,socket,ipaddress\nfrom urllib.parse import urlsplit
+import argparse,json,sys,urllib.request,urllib.error,socket,ipaddress
+from urllib.parse import urlsplit
 from pathlib import Path
 from datetime import datetime,timezone
 
@@ -27,7 +28,8 @@ def main():
  for label,method,headers in [("HEAD","HEAD",{}),("GET-range","GET",{"Range":"bytes=0-0"}),("GET-small","GET",{"Range":"bytes=0-4095"})]:
   try:
    req=urllib.request.Request(a.url,method=method,headers={"User-Agent":"AgentKit-route-probe/1.0",**headers})
-   opener=urllib.request.build_opener(PublicRedirectHandler)\n   with opener.open(req,timeout=a.timeout) as r:
+   opener=urllib.request.build_opener(PublicRedirectHandler)
+   with opener.open(req,timeout=a.timeout) as r:
     if method=="GET":r.read(4096)
     rows.append({"route":label,"ok":True,"status":r.status,"content_type":r.headers.get("Content-Type"),"content_length":r.headers.get("Content-Length"),"final_url":r.geturl()})
   except (OSError,urllib.error.URLError,TimeoutError) as e:rows.append({"route":label,"ok":False,"error":f"{type(e).__name__}: {e}"})
