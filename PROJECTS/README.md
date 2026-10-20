@@ -1,6 +1,15 @@
 # Project records
 
-Each project uses the same four canonical files, with no duplicate plan/cache/editing routes:
+Each project uses the same four canonical files, with no duplicate plan/cache/editing routes.
+
+## AgentKit
+
+- [`WORK_MODELS.md`](./AgentKit/WORK_MODELS.md) — implementation, target-validation and integration procedures.
+- [`PLAN.md`](./AgentKit/PLAN.md) — dependency-ordered AgentKit roadmap and gap review.
+- [`CACHE.md`](./AgentKit/CACHE.md) — verified baseline, decisions and evidence boundaries.
+- [`IN_PROGRESS.md`](./AgentKit/IN_PROGRESS.md) — latest planning handoff and next action.
+
+## ReForge Visuals
 
 - [`WORK_MODELS.md`](./ReForge-Visuals/WORK_MODELS.md) — working methods and validation model.
 - [`PLAN.md`](./ReForge-Visuals/PLAN.md) — work not yet started.
