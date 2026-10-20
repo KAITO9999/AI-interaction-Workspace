@@ -230,3 +230,47 @@ Calibration file example (rates and latency ranges must be measured on the selec
 The estimator sums the calibrated CPU, memory-transfer, and API components. API count is divided into batches using the explicit concurrency value. The total is a serial-component estimate; it does not model arbitrary overlap between CPU work and network waits. Optional clock and memory-bandwidth scaling is applied only when the calibration explicitly sets the corresponding allow_linear_* flag and provides reference specifications. Core count is recorded but is not multiplied into main-thread JavaScript throughput. A working_set_bytes operation is checked against --memory-gb when supplied; exceeding the specified total memory makes the estimate unavailable. The confidence label reflects the number of calibration samples supplied, not independent verification of their quality. Static source findings and workload JSON are separate evidence: the analyzer does not silently infer loop counts, input sizes, or function invocation counts from source text. Each finding and the run summary are appended to .agentkit-logs/js-load-analysis.jsonl; the JSON report stores hashes of the workload and calibration input files for traceability.
 
 For design rationale, see the V8 team's [real-world performance methodology](https://v8.dev/blog/real-world-performance), [JavaScript execution costs](https://v8.dev/blog/cost-of-javascript-2019), and [benchmark limitations](https://v8.dev/blog/retiring-octane). Those sources emphasize representative workload measurement and show why a single synthetic benchmark or clock rate is not a universal runtime predictor. The [JetStream 3 benchmark suite](https://webkit.org/blog/17899/introducing-the-jetstream-3-benchmark-suite/) covers multiple JS/Wasm workloads, while [Speedometer](https://github.com/WebKit/Speedometer) measures end-to-end web-app responsiveness. Their aggregate scores are useful for comparing runtimes under the same benchmark, but must not be directly converted into universal operations-per-second or API-latency constants. For browser targets, Chrome documents 50 ms as the Long Tasks threshold and recommends breaking up work that blocks the main thread ([Long Animation Frames / Long Tasks](https://developer.chrome.com/docs/web-platform/long-animation-frames)). AgentKit only uses that threshold as a conditional warning when the selected calibration identifies a browser-like runtime. The follow-on estimator should accumulate bounded operation counts and API-specific cost ranges, with each coefficient traceable to a target-runtime benchmark or published evidence.
+
+
+## Multi-profile JavaScript workload analysis
+
+Running without `--profile` evaluates all four reference profiles concurrently and writes independent reports and logs:
+
+```bash
+python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --workload-template workload-template.json --json-dir agentkit-profile-reports
+```
+
+Outputs are `low.json`, `mid.json`, `mid-high.json`, and `high-end.json`, plus per-profile workload templates when requested and per-profile JSONL logs. The bundled reference hardware assumptions (clock, cores, RAM, bandwidth) are explicit starting points, not measurements of any real device or a universal definition of a tier. Override a value to apply the same explicit assumption to all four profiles, or use `--profile mid` for a single-profile run. A reliable runtime estimate still requires a bounded workload and measured calibration for each profile/runtime.
+
+## Multi-language, platform, and graphics audit
+
+```bash
+python3 TOOLS/AgentKit/agentkit_lang_audit.py --root path/to/project --json language-audit.json
+```
+
+The first policy pass detects source types and selected risk signals across C/C++, Rust, Kotlin/Java, JS/TS, Android manifests/build files, and shader files. It checks explicit Android `minSdkVersion` against the project baseline API 30 (Android 11) and Android manifest OpenGL ES declarations against ES 3.0. This is a policy threshold, not a guarantee that older versions are insecure or that all newer devices support a given GPU feature.
+
+For Android Vulkan, the proposed modern baseline is Vulkan 1.1, with Vulkan 1.3 treated as an optional advanced level. Android's documentation says Vulkan is available from API 24, but not all Android devices have a Vulkan driver; Vulkan 1.1 is required on new 64-bit Android devices launched with Android 10 or later. Runtime driver/API/feature queries remain necessary. Sources: [Android Vulkan guidance](https://developer.android.com/games/develop/vulkan/native-engine-support), [Vulkan version guide](https://docs.vulkan.org/guide/latest/versions.html), and [Android OpenGL ES versions](https://developer.android.com/develop/ui/views/graphics/opengl/about-opengl).
+
+## Virtual editing, MCP payload selection, and bundles
+
+```bash
+# Stage a copy-on-write change; original stays unchanged
+python3 TOOLS/AgentKit/agentkit_virtual_edit.py --root path/to/project stage src/example.py --replace "old" --with "new" --slot virtual-03
+python3 TOOLS/AgentKit/agentkit_virtual_edit.py --root path/to/project show src/example.py --slot virtual-03
+python3 TOOLS/AgentKit/agentkit_virtual_edit.py --root path/to/project list
+
+# Extract only the requested part of a large JSON payload, without echoing the whole source
+python3 TOOLS/AgentKit/agentkit_mcp_bridge.py extract-json large-result.json /result/items/0 --output selected-item.json
+python3 TOOLS/AgentKit/agentkit_mcp_bridge.py copy-file image.png --output forwarded/image.png
+
+# Bundle explicit files for an AI agent to retrieve without manual copy-paste
+python3 TOOLS/AgentKit/agentkit_bundle.py --root . --output agentkit-tools.zip --include TOOLS/AgentKit/agentkit_lang_audit.py --include TOOLS/AgentKit/agentkit_virtual_edit.py
+
+# Probe independent HTTPS request routes without downloading/executing the whole artifact
+python3 TOOLS/AgentKit/agentkit_route_probe.py https://example.org/artifact.zip --output route-probe.json
+```
+
+The virtual editor offers ten isolated logical slots. Staging and inspection do not mutate originals; `apply --yes` is an explicit write operation and refuses to apply if the original changed since staging. The payload bridge supports JSON Pointer extraction, marker-based text slicing, binary-preserving file copy, and hashes. It is a local payload utility, **not an authenticated generic MCP client**: actual MCP/connector calls must use the installed connector's declared tool schema and permissions. It is designed to keep large documents out of model context by passing a selected output file and compact metadata instead.
+
+Tool design and safety rules are kept separately under `TOOLS/AgentKit/policies/`. The original user request should be stored verbatim in a private workspace or private notes repository; this repository is public, so the original request text is intentionally not copied here.
