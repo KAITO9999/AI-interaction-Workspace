@@ -420,7 +420,7 @@ def main() -> int:
             "note": "This template is not valid estimator input until converted into a workload JSON with explicit operations and counts."
         }
         template_path.parent.mkdir(parents=True, exist_ok=True)
-        template_path.write_text(json.dumps(template, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+        template_path.write_text(json.dumps(template, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     runtime_estimate = estimate_runtime(args.profile, workload, calibration, profile)
     if calibration is not None:
         runtime_estimate["calibration_loaded"] = True
