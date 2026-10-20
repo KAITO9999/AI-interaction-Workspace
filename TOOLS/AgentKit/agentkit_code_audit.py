@@ -272,10 +272,9 @@ def main() -> int:
                 content_seen[metric["sha256"]].append(metric["path"])
                 try:
                     text = path.read_text(encoding="utf-8", errors="replace")
-                    masked_text, _ = mask_comments_and_strings(text, path.suffix.lower())
-                    for number, line in enumerate(masked_text.splitlines(), 1):
+                    for number, line in enumerate(text.splitlines(), 1):
                         stripped = line.strip()
-                        if len(stripped) >= 40:
+                        if len(stripped) >= 40 and not COMMENT_RE.match(stripped):
                             line_seen[stripped].append((metric["path"], number))
                 except OSError:
                     pass
