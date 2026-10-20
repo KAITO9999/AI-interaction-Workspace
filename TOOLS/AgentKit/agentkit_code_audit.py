@@ -104,7 +104,7 @@ def mask_comments_and_strings(source: str, suffix: str) -> tuple[str, set[int]]:
         if started:
             continue
         if any(source.startswith(marker, i) for marker in line_comments):
-            while i < len(chars) and chars[i] != "\\n":
+            while i < len(chars) and chars[i] != "\n":
                 comment_chars.add(current_line)
                 chars[i] = " "
                 i += 1
