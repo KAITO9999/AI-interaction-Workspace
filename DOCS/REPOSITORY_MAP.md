@@ -18,7 +18,7 @@
 | [TOOLS/AgentKit/AI_USAGE.md](../TOOLS/AgentKit/AI_USAGE.md) | Selecting tool routes | Probe tools before creating substitutes |
 | [DOCS/SPACE_CLASSIFICATION.md](SPACE_CLASSIFICATION.md) | Handling data | Public/private boundaries |
 | [DOCS/GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) | Publishing changes | Branch, PR and CI procedure |
-| [DOCS/GITLAB_PARITY_AUDIT.md](DOCS/GITLAB_PARITY_AUDIT.md) | Migration/source comparison | Mapping and intentional omissions |
+| [DOCS/GITLAB_PARITY_AUDIT.md](GITLAB_PARITY_AUDIT.md) | Migration/source comparison | Mapping and intentional omissions |
 | [PROJECTS/ReForge-Visuals/WORK_MODELS.md](../PROJECTS/ReForge-Visuals/WORK_MODELS.md) | ReForge task only | Work models and duplicate-route exclusions |
 | [PROJECTS/ReForge-Visuals/PLAN.md](../PROJECTS/ReForge-Visuals/PLAN.md) | ReForge planning | Pending runtime validation only |
 | [PROJECTS/ReForge-Visuals/CACHE.md](../PROJECTS/ReForge-Visuals/CACHE.md) | ReForge fact/decision lookup | Static evidence, decisions, completed items |
