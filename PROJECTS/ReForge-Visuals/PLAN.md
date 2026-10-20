@@ -1,19 +1,20 @@
 # ReForge Visuals — plan
 
-Status: static work complete for candidate 3.24.2; target-world and runtime validation pending. Completed static tasks are recorded in [CACHE.md](CACHE.md) and are not duplicated here.
+Status: candidate 3.24.5 static checks pass; in-world appearance and Content Log validation remain pending. Completed static evidence is recorded in [CACHE.md](CACHE.md).
 
-## P1 — Verify 3.24.2 water tint in-world and inspect Content Log
+## P1 — Validate water/fog candidate 3.24.5 in-world
 
-- **Outcome:** confirm that normal biome water gains the intended blue tint without making rivers/oceans/swamps visually wrong.
-- **Prerequisite:** a real Bedrock world on the intended game version and the exact 3.24.2 candidate.
+- **Outcome:** confirm water color, underwater visibility and distance behavior with VV on/off; keep water stylized and substantial rather than over-clear or muddy.
+- **Prerequisite:** import the exact ReForge_Visuals-3.24.5.mcaddon artifact and confirm the target Bedrock version/device.
 - **Checks:**
-  - Test with Vibrant Visuals enabled and disabled.
-  - Check default-water biomes (such as plains/forest), river/frozen river, ocean/warm ocean and swamp/mangrove/lush-cave exceptions.
-  - Repeat with the expected subpack/quality tiers where applicable.
-  - Inspect Content Log after pack activation and during water/biome/weather transitions.
-  - Record screenshots or reproducible observations, game/device version and selected subpack.
-- **Complete when:** observations show whether the blue tint is improved and exceptions remain appropriate; Content Log output is recorded; any new failures are triaged and re-tested or left explicitly open.
-- **Current state:** not run; requires in-game runtime.
+  - Test both Vibrant Visuals/Deferred and Simple/non-VV modes.
+  - Inspect standard water, swamp/mangrove, desert/mesa, jungle, river, ocean/deep ocean and a deep-water location.
+  - Check surface tint, entry transition, mid-depth blue progression, visibility near the bottom, and darkening at several world heights.
+  - Test non-VV swamp at 14 blocks; keep desert/mesa at 28; check VV ocean distance and biome changes while still underwater.
+  - Change biome and graphics mode at the same in-game time to verify time-progressive fog does not retain an old range.
+  - Inspect Content Log after pack activation and transitions; capture evidence with game version, device, mode, biome and subpack tier.
+- **Complete when:** visual evidence and Content Log results exist for both modes; regressions are fixed/re-tested or clearly left open. Static JSON checks alone cannot close this item.
+- **Current state:** static verification passed; Bedrock runtime not run in this session.
 
 ## P2 — Performance and multiplayer measurement
 
