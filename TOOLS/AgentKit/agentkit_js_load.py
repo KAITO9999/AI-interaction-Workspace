@@ -12,6 +12,7 @@ import os
 import json
 import re
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -403,9 +404,47 @@ def main() -> int:
     parser.add_argument("--workload-template", help="Write a source-linked workload template that requires manual count/concurrency assumptions.")
     parser.add_argument("--workload-json", help="Explicit scenario JSON with operation counts and API concurrency assumptions.")
     parser.add_argument("--calibration-json", help="Measured schema-v1 cost ranges for the selected target profile.")
-    parser.add_argument("--json", dest="json_path", help="Write one JSON report; relative paths resolve against --root.")\n    parser.add_argument("--json-dir", help="When --profile=all, write one report per profile in this directory.")
+    parser.add_argument("--json", dest="json_path", help="Write one JSON report; relative paths resolve against --root.")
+    parser.add_argument("--json-dir", help="When --profile=all, write one report per profile in this directory.")
     parser.add_argument("--log-dir", default=".agentkit-logs")
     args = parser.parse_args()
+    if args.profile == "all":
+        if args.json_path:
+            parser.error("--json cannot be combined with --profile=all; use --json-dir")
+        root_arg = str(Path(args.root).resolve())
+        if not Path(root_arg).is_dir():
+            parser.error(f"root is not a directory: {root_arg}")
+        out_dir = Path(args.json_dir or "agentkit-profile-reports")
+        if not out_dir.is_absolute():
+            out_dir = Path(root_arg) / out_dir
+        out_dir.mkdir(parents=True, exist_ok=True)
+        def run_profile(tier):
+            command = [sys.executable, str(Path(__file__).resolve()), "--root", root_arg, "--profile", tier,
+                       "--json", str(out_dir / f"{tier}.json")]
+            for item in args.file:
+                command.extend(["--file", item])
+            for option, value in (("--clock-ghz", args.clock_ghz), ("--cores", args.cores),
+                                  ("--memory-gb", args.memory_gb), ("--memory-bandwidth-gbps", args.memory_bandwidth_gbps),
+                                  ("--workload-template", str(out_dir / f"{tier}-workload-template.json") if args.workload_template else None),
+                                  ("--workload-json", args.workload_json), ("--calibration-json", args.calibration_json),
+                                  ("--log-dir", str(out_dir / "logs" / tier))):
+                if value is not None:
+                    command.extend([option, str(value)])
+            result = __import__("subprocess").run(command, capture_output=True, text=True, check=False)
+            return tier, result
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            results = list(executor.map(run_profile, ("low", "mid", "mid-high", "high-end")))
+        failures = []
+        for tier, result in results:
+            print(f"=== profile: {tier} ===")
+            if result.stdout:
+                print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+            if result.stderr:
+                print(result.stderr, file=sys.stderr, end="" if result.stderr.endswith("\n") else "\n")
+            if result.returncode:
+                failures.append(tier)
+        print(f"Wrote reports for {4 - len(failures)}/4 profiles to {out_dir}")
+        return 1 if failures else 0
     root = Path(args.root).resolve()
     if not root.is_dir():
         print(f"ERROR: root is not a directory: {root}", file=sys.stderr)
