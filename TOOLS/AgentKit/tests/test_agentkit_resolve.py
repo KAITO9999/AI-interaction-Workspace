@@ -30,7 +30,7 @@ class ResolverTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             valid.write_text("{bad", encoding="utf-8")
             result = run("json-check", str(valid), "--prefer-fallback", env=self.empty_path_env(root / "empty"))
-            self.assertEqual(result.returncode, 1)
+            self.assertEqual(result.returncode, 5)
             self.assertIn("INVALID JSON", result.stderr)
 
     def test_search_fallback_skips_dependency_directories(self):
