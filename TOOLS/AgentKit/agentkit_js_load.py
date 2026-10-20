@@ -196,16 +196,23 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
         name = match.group(1) or match.group(2)
         if name:
             declared.append(name)
-    identifier_counts = Counter(re.findall(r"\b[A-Za-z_$][\w$]*\b", code))
+    identifier_counts = Counter()
+    identifier_locations = {}
+    for line_number, source_line in enumerate(lines, 1):
+        for identifier_match in re.finditer(r"\b[A-Za-z_$][\w$]*\b", source_line):
+            identifier = identifier_match.group()
+            identifier_counts[identifier] += 1
+            if identifier_counts[identifier] == 1:
+                identifier_locations[identifier] = line_number
+            else:
+                identifier_locations.pop(identifier, None)
     for name in sorted(set(declared)):
         exported = (re.search(r"\bexport\s+(?:default\s+)?(?:async\s+)?function\s+" + re.escape(name) + r"\b", code)
                     or re.search(r"\bexport\s+(?:const|let|var)\s+" + re.escape(name) + r"\b", code))
         if exported or identifier_counts[name] != 1:
             continue
-        uses = list(re.finditer(r"\b" + re.escape(name) + r"\b", code))
-        if len(uses) == 1:
-            line = code.count("\n", 0, uses[0].start()) + 1
-            findings.append({
+        line = identifier_locations[name]
+        findings.append({
                 "path": rel, "line": line, "category": "REACHABILITY", "priority": "LOW",
                 "title": "Function may have no direct references",
                 "detail": f"{name} has no other textual reference in this file. It may still be exported, registered indirectly, called by a framework, or invoked dynamically; confirm intended use before removal.",
