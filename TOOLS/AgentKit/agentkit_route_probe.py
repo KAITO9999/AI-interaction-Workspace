@@ -22,7 +22,8 @@ class PublicRedirectHandler(urllib.request.HTTPRedirectHandler):
   return super().redirect_request(req,fp,code,msg,headers,newurl)
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument("url");p.add_argument("--timeout",type=float,default=5);p.add_argument("--output",default="route-probe.json");a=p.parse_args()
- try:validate_public_https(a.url)\n except ValueError as e:print(f"ERROR: {e}",file=sys.stderr);return 2
+ try:validate_public_https(a.url)
+ except ValueError as e:print(f"ERROR: {e}",file=sys.stderr);return 2
  if not .5<=a.timeout<=15:print("ERROR: timeout must be 0.5–15 seconds",file=sys.stderr);return 2
  rows=[]
  for label,method,headers in [("HEAD","HEAD",{}),("GET-range","GET",{"Range":"bytes=0-0"}),("GET-small","GET",{"Range":"bytes=0-4095"})]:
