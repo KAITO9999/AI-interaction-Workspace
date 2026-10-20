@@ -178,7 +178,8 @@ The test runner's environment metadata and measured history are operational diag
 
     python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --profile low
     python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --profile mid --clock-ghz 3.2 --cores 8 --memory-gb 8
-    python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --file src/main.js --profile high-end --json js-load.json\n    python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --profile mid --workload-json workload.json --calibration-json calibration.json
+    python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --file src/main.js --profile high-end --json js-load.json
+    python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --profile mid --workload-json workload.json --calibration-json calibration.json
 
 The profile is supplied by the user: low, mid, mid-high, or high-end. Optional clock/core/memory figures are assumptions supplied on the command line. This tool never reads the host's CPU, RAM, OS, or clock to infer a target device.
 
