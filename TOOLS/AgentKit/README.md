@@ -163,7 +163,8 @@ Execution-time and processing-volume observations are integrated into the same a
 
     python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --list
     python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --quick
-    python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --skip-file tests/test_integration.py\n    python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --skip-test-id package.tests.test_core.CoreTests.test_edge_case
+    python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --skip-file tests/test_integration.py
+    python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --skip-test-id package.tests.test_core.CoreTests.test_edge_case
     python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project
 
 The runner probes host metadata before estimating: OS, architecture, Python version, CPU count, available memory metadata, and Minecraft add-on/package/manifest signals. Runtime estimates are produced only from prior successful/recorded runs with matching environment and identical test selection; without calibration data it explicitly says the estimate is unavailable. Estimates use the median of matching history, with confidence based on sample count. Minecraft-like projects always downgrade estimates and print a warning because game engine/version, script APIs, target device, and in-game state may not match the host environment. Inspect the actual target environment before trusting timing estimates.
