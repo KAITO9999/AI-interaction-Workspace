@@ -10,6 +10,11 @@
 - [ ] Implement conversation-isolated durable MCP workspaces, artifacts, event logs, dependencies, and resume checkpoints.
 - [ ] Implement an AI handoff bundle (goal/acceptance criteria, status/next action, decisions, paths and versions, command/test evidence, blockers/risks, dependency graph and recovery steps) plus redacted context export/import.
 - [ ] Add change provenance, bounded retry/idempotency, destructive-action checkpoints, and an acceptance-evidence packet.
+- [ ] Add reproducible failure bundles and per-tool permission/side-effect policies enforced by the execution layer.
+- [ ] Add re-observation/reconciliation after interruptions; do not blindly replay uncertain tool actions.
+- [ ] Add action receipts/effect ledger, evidence-linked claims, and recoverable context-compaction checkpoints.
+- [ ] Run prompt-injection tests against untrusted web pages/files/tool outputs and validate allowlists, least privilege, and confirmation gates.
+- [ ] Add fault-injection tests for crashes, network loss, timeouts after side effects, duplicate events, revoked auth, and corrupted checkpoints.
 - [ ] Implement staged termination guard: first refusal with remaining items; second request prompts a handoff plan; subsequent request recommends dependency/omission review, without trapping the user indefinitely.
 - [ ] Implement app-visible progress states, workspace inspection, notifications, and user-confirmation queue.
 - [ ] Evaluate Android battery-optimization exemption flow and document OS/background execution limitations.
