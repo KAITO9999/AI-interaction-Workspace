@@ -115,7 +115,7 @@ python3 TOOLS/AgentKit/agentkit_resolve.py --help
 python3 TOOLS/AgentKit/mobile_test.py --help
 ```
 
-The resolver normally auto-detects the current execution environment. Use `--environment termux|linux|wsl|macos|windows` to explicitly select the environment policy used to filter package managers, or `--environment auto` to return to detection. This is a local execution-context selector, not an emulator or remote environment switch; it does not make tools from another OS available.
+The resolver normally auto-detects the current execution environment. Use `--environment termux|linux|wsl|macos|windows` to explicitly select the environment policy used to filter package managers, or `--environment auto` to return to detection. This is a local execution-context selector, not an emulator or remote environment switch; it does not make tools from another OS available. Package installation is blocked if an explicitly selected environment does not match the current runtime.
 
 When a task runs through a non-preferred external command (for example, `grep` instead of `rg`) or a Python substitute, stderr prints exactly:
 
