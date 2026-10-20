@@ -2,6 +2,15 @@
 
 Core CLI: version 0.1.0. Extension CLI: version 0.2.0. Python standard library only. Python 3.9+ is recommended.
 
+## Execution environment and scope
+
+AgentKit runs **in the environment where its command is launched**. For instructions in this workspace that refer to the AI agent's Linux environment, run AgentKit in the Linux execution environment available to the AI agent (for example, its hosted workspace), not on the user's Android/Termux device. Do not assume the AI-side Linux environment and the user's device share files, installed commands, permissions, or network access.
+
+- Use the AI-side Linux environment for AI-agent environment discovery, local checks, and helper workflows when that environment is the intended target.
+- Use Termux-specific inventory notes only as evidence about the separately inspected Termux environment; they do not describe the AI-side Linux environment.
+- The CLI is not inherently tied to either environment. Always state the actual environment and working root used for each probe, and do not present historical results as a fresh check.
+
+
 ## Core CLI
 
     python3 TOOLS/AgentKit/agentkit.py --help
