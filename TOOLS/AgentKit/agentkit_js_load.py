@@ -396,6 +396,10 @@ def main() -> int:
     if template_path:
         if not template_path.is_absolute():
             template_path = root / template_path
+        template_path = template_path.resolve()
+        if template_path in {workload_path.resolve() if workload_path else None, calibration_path.resolve() if calibration_path else None}:
+            print("ERROR: --workload-template must not overwrite a workload or calibration input file.", file=sys.stderr)
+            return 2
         template = {
             "schema_version": 1,
             "template_only": True,
@@ -419,8 +423,12 @@ def main() -> int:
             ],
             "note": "This template is not valid estimator input until converted into a workload JSON with explicit operations and counts."
         }
-        template_path.parent.mkdir(parents=True, exist_ok=True)
-        template_path.write_text(json.dumps(template, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        try:
+            template_path.parent.mkdir(parents=True, exist_ok=True)
+            template_path.write_text(json.dumps(template, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        except OSError as exc:
+            print(f"ERROR: could not write workload template: {exc}", file=sys.stderr)
+            return 2
     runtime_estimate = estimate_runtime(args.profile, workload, calibration, profile)
     if calibration is not None:
         runtime_estimate["calibration_loaded"] = True
