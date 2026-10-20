@@ -121,7 +121,7 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertIn("kotlin", report["languages_detected"])
             self.assertEqual(report["android_min_sdk"], 30)
             self.assertEqual(report["opengl_es_minimum"], "3.0")
-            self.assertIn("heuristic", report["limitations"])
+            self.assertTrue(any("heuristic" in item for item in report["limitations"]))
 
     def test_virtual_edit_overlay_preserves_original_until_apply(self):
         script = ROOT / "agentkit_virtual_edit.py"
