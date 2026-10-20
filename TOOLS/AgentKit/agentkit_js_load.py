@@ -16,9 +16,17 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 JS_EXTENSIONS = {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"}
 SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "dist", "build", "target", ".next", ".agentkit-logs"}
+# Explicit reference profiles, not claims about every device in a tier. Users can override each value.
+# Values are starting assumptions; calibrated measurements must supersede them for reliable estimates.
+PROFILE_DEFAULTS = {
+    "low": {"clock_ghz": 1.2, "cores": 4, "memory_gb": 2.0, "memory_bandwidth_gbps": 10.0},
+    "mid": {"clock_ghz": 2.0, "cores": 6, "memory_gb": 4.0, "memory_bandwidth_gbps": 25.0},
+    "mid-high": {"clock_ghz": 2.8, "cores": 8, "memory_gb": 8.0, "memory_bandwidth_gbps": 50.0},
+    "high-end": {"clock_ghz": 3.5, "cores": 12, "memory_gb": 16.0, "memory_bandwidth_gbps": 80.0},
+}
 API_PATTERNS = [
     (re.compile(r"\bfetch\s*\("), "fetch", "NETWORK", "Network request", "Network duration depends on server, connection, cache, and response size."),
     (re.compile(r"\bXMLHttpRequest\b|\.send\s*\("), "xhr", "NETWORK", "XHR/send call", "Transport and event timing are runtime-dependent."),
@@ -386,7 +394,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=".", help="Source root. Does not trigger host environment probing.")
     parser.add_argument("--file", action="append", default=[], help="Relative JS/TS source file; repeatable.")
-    parser.add_argument("--profile", choices=["low", "mid", "mid-high", "high-end"], required=True,
+    parser.add_argument("--profile", choices=["all", "low", "mid", "mid-high", "high-end"], default="all",
                         help="User-selected target tier; no device is detected automatically.")
     parser.add_argument("--clock-ghz", type=float, help="Assumed target clock in GHz (user supplied).")
     parser.add_argument("--cores", type=int, help="Assumed target CPU core count (user supplied).")
@@ -395,7 +403,7 @@ def main() -> int:
     parser.add_argument("--workload-template", help="Write a source-linked workload template that requires manual count/concurrency assumptions.")
     parser.add_argument("--workload-json", help="Explicit scenario JSON with operation counts and API concurrency assumptions.")
     parser.add_argument("--calibration-json", help="Measured schema-v1 cost ranges for the selected target profile.")
-    parser.add_argument("--json", dest="json_path", help="Write a JSON report; relative paths resolve against --root.")
+    parser.add_argument("--json", dest="json_path", help="Write one JSON report; relative paths resolve against --root.")\n    parser.add_argument("--json-dir", help="When --profile=all, write one report per profile in this directory.")
     parser.add_argument("--log-dir", default=".agentkit-logs")
     args = parser.parse_args()
     root = Path(args.root).resolve()
