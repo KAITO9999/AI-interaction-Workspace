@@ -271,6 +271,7 @@ def main() -> int:
             print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr)
         return result.returncode
     print("注意、代替コマンドな為既存とは動作が異なります: Python standard-library fallback", file=sys.stderr)
+    print("Using Python standard-library fallback.")
     return fallback(args.task, args)
 
 
