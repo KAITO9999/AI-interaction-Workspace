@@ -269,6 +269,10 @@ python3 TOOLS/AgentKit/agentkit_bundle.py --root . --output agentkit-tools.zip -
 
 # Probe independent HTTPS request routes without downloading/executing the whole artifact
 python3 TOOLS/AgentKit/agentkit_route_probe.py https://example.org/artifact.zip --output route-probe.json
+# For GitHub repositories, plan archive/codeload/API candidates without network access
+python3 TOOLS/AgentKit/agentkit_route_probe.py https://github.com/owner/repo --github-ref main --plan-only --output route-plan.json
+# Probe the candidate URL routes (HEAD + bounded Range GET); public HTTPS only
+python3 TOOLS/AgentKit/agentkit_route_probe.py https://github.com/owner/repo --github-ref main --output route-probe.json
 ```
 
 The virtual editor offers ten isolated logical slots. Staging and inspection do not mutate originals; `apply --yes` is an explicit write operation and refuses to apply if the original changed since staging. The payload bridge supports JSON Pointer extraction, marker-based text slicing, binary-preserving file copy, and hashes. It is a local payload utility, **not an authenticated generic MCP client**: actual MCP/connector calls must use the installed connector's declared tool schema and permissions. It is designed to keep large documents out of model context by passing a selected output file and compact metadata instead.
