@@ -156,10 +156,12 @@ class AgentKitAddonTests(unittest.TestCase):
         result = run(script, "https://127.0.0.1/artifact.zip")
         self.assertEqual(result.returncode, 2)
         self.assertIn("non-public destination", result.stderr)
-        plan = run(script, "https://github.com/example/project", "--github-ref", "main", "--plan-only", "--output", str(Path(tempfile.gettempdir()) / "agentkit-route-plan-test.json"))
-        self.assertEqual(plan.returncode, 0, plan.stderr + plan.stdout)
-        plan_data = json.loads((Path(tempfile.gettempdir()) / "agentkit-route-plan-test.json").read_text(encoding="utf-8"))
-        self.assertTrue(any("codeload.github.com" in item["url"] for item in plan_data["url_candidates"]))
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "route-plan.json"
+            plan = run(script, "https://github.com/example/project", "--github-ref", "main", "--plan-only", "--output", str(output))
+            self.assertEqual(plan.returncode, 0, plan.stderr + plan.stdout)
+            plan_data = json.loads(output.read_text(encoding="utf-8"))
+            self.assertTrue(any("codeload.github.com" in item["url"] for item in plan_data["url_candidates"]))
 
     def test_bundle_tool_creates_downloadable_zip_without_network_access(self):
         script = ROOT / "agentkit_bundle.py"
