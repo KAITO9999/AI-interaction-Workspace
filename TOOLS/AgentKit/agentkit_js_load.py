@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import math
 import json
 import re
 import sys
@@ -193,6 +194,94 @@ def load_calibration(path: Path | None) -> dict | None:
         raise ValueError("calibration JSON must be an object with schema_version=1")
     return data
 
+def load_workload(path: Path | None) -> dict | None:
+    if path is None:
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"could not read workload JSON: {exc}") from exc
+    if not isinstance(data, dict) or data.get("schema_version") != 1 or not isinstance(data.get("operations"), list):
+        raise ValueError("workload JSON must be an object with schema_version=1 and an operations array")
+    for index, operation in enumerate(data["operations"]):
+        if not isinstance(operation, dict) or operation.get("kind") not in {"cpu_ops", "memory_bytes", "api"}:
+            raise ValueError(f"workload operation {index} must have kind cpu_ops, memory_bytes, or api")
+        count = operation.get("count")
+        if isinstance(count, bool) or not isinstance(count, (int, float)) or count < 0:
+            raise ValueError(f"workload operation {index} count must be a non-negative number")
+        if operation["kind"] == "api":
+            if not isinstance(operation.get("name"), str) or not operation["name"]:
+                raise ValueError(f"workload API operation {index} requires a non-empty name")
+            concurrency = operation.get("concurrency")
+            if isinstance(concurrency, bool) or not isinstance(concurrency, int) or concurrency < 1:
+                raise ValueError(f"workload API operation {index} requires positive integer concurrency")
+            if count and concurrency > count:
+                operation["concurrency"] = int(count)
+    return data
+
+def unavailable_estimate(reason: str, required_inputs: list[str]) -> dict:
+    return {"milliseconds": None, "range_ms": None, "confidence": "INSUFFICIENT_DATA",
+            "reason": reason, "required_inputs": required_inputs}
+
+def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict | None) -> dict:
+    if workload is None or calibration is None:
+        missing = []
+        if workload is None:
+            missing.append("workload JSON with bounded operation counts and API concurrency")
+        if calibration is None:
+            missing.append("measured target-runtime calibration JSON for the selected profile")
+        return unavailable_estimate("No total runtime is calculated without both an explicit workload scenario and target-runtime calibration.", missing)
+    profile_data = calibration.get("profiles", {}).get(profile_name)
+    if not isinstance(profile_data, dict):
+        return unavailable_estimate(f"Calibration has no profile named {profile_name}.", [f"profiles.{profile_name} in calibration JSON"])
+    target_runtime = calibration.get("target_runtime")
+    if not isinstance(target_runtime, str) or not target_runtime.strip():
+        return unavailable_estimate("Calibration is missing target_runtime metadata.", ["calibration target_runtime"])
+    cpu_rate = profile_data.get("cpu_ops_per_second")
+    memory_rate = profile_data.get("memory_bytes_per_second")
+    api_rates = profile_data.get("api_latency_ms", {})
+    def valid_range(value):
+        return (isinstance(value, list) and len(value) == 2
+                and all(not isinstance(item, bool) and isinstance(item, (int, float)) and item > 0 for item in value)
+                and value[0] <= value[1])
+    missing = []
+    needs_cpu = any(op["kind"] == "cpu_ops" and op["count"] for op in workload["operations"])
+    needs_memory = any(op["kind"] == "memory_bytes" and op["count"] for op in workload["operations"])
+    if needs_cpu and not valid_range(cpu_rate):
+        missing.append("profiles." + profile_name + ".cpu_ops_per_second [minimum, maximum]")
+    if needs_memory and not valid_range(memory_rate):
+        missing.append("profiles." + profile_name + ".memory_bytes_per_second [minimum, maximum]")
+    for operation in workload["operations"]:
+        if operation["kind"] == "api" and operation["count"] and not valid_range(api_rates.get(operation["name"])):
+            missing.append("profiles." + profile_name + ".api_latency_ms." + operation["name"] + " [minimum, maximum]")
+    if missing:
+        return unavailable_estimate("Calibration does not contain valid measured ranges for every workload category.", sorted(set(missing)))
+    cpu_low = cpu_high = memory_low = memory_high = api_low = api_high = 0.0
+    for operation in workload["operations"]:
+        count = float(operation["count"])
+        if operation["kind"] == "cpu_ops" and count:
+            cpu_low += count / float(cpu_rate[1]) * 1000
+            cpu_high += count / float(cpu_rate[0]) * 1000
+        elif operation["kind"] == "memory_bytes" and count:
+            memory_low += count / float(memory_rate[1]) * 1000
+            memory_high += count / float(memory_rate[0]) * 1000
+        elif operation["kind"] == "api" and count:
+            latency_low, latency_high = api_rates[operation["name"]]
+            batches = math.ceil(count / operation["concurrency"])
+            api_low += batches * float(latency_low)
+            api_high += batches * float(latency_high)
+    low = round(cpu_low + memory_low + api_low, 3)
+    high = round(cpu_high + memory_high + api_high, 3)
+    samples = profile_data.get("samples", 0)
+    confidence = "HIGH" if isinstance(samples, int) and samples >= 10 else "MEDIUM" if isinstance(samples, int) and samples >= 3 else "LOW"
+    return {"milliseconds": round((low + high) / 2, 3), "range_ms": [low, high], "confidence": confidence,
+            "target_runtime": target_runtime, "calibration_samples": samples if isinstance(samples, int) else 0,
+            "assumption": "Serial component sum; API concurrency is represented by explicit batches. CPU and memory ranges must be measured on the selected target runtime.",
+            "components": {"cpu_ms": [round(cpu_low, 3), round(cpu_high, 3)],
+                           "memory_transfer_ms": [round(memory_low, 3), round(memory_high, 3)],
+                           "api_wait_ms": [round(api_low, 3), round(api_high, 3)]},
+            "required_inputs": []}
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=".", help="Source root. Does not trigger host environment probing.")
@@ -203,7 +292,8 @@ def main() -> int:
     parser.add_argument("--cores", type=int, help="Assumed target CPU core count (user supplied).")
     parser.add_argument("--memory-gb", type=float, help="Assumed target memory capacity in GB (user supplied).")
     parser.add_argument("--memory-bandwidth-gbps", type=float, help="Assumed memory bandwidth in GB/s (user supplied).")
-    parser.add_argument("--calibration-json", help="Optional schema-v1 cost calibration; without it absolute runtime is not fabricated.")
+    parser.add_argument("--workload-json", help="Explicit scenario JSON with operation counts and API concurrency assumptions.")
+    parser.add_argument("--calibration-json", help="Measured schema-v1 cost ranges for the selected target profile.")
     parser.add_argument("--json", dest="json_path", help="Write a JSON report; relative paths resolve against --root.")
     parser.add_argument("--log-dir", default=".agentkit-logs")
     args = parser.parse_args()
@@ -220,6 +310,10 @@ def main() -> int:
         if calibration_path and not calibration_path.is_absolute():
             calibration_path = root / calibration_path
         calibration = load_calibration(calibration_path)
+        workload_path = Path(args.workload_json) if args.workload_json else None
+        if workload_path and not workload_path.is_absolute():
+            workload_path = root / workload_path
+        workload = load_workload(workload_path)
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
@@ -232,15 +326,11 @@ def main() -> int:
             return 2
         findings.extend(found)
         metrics.append(metric)
-    # Runtime is intentionally unavailable unless calibrated coefficients and workload bounds exist.
-    # This avoids converting source-line counts or GHz into falsely precise milliseconds.
-    runtime_estimate = {"milliseconds": None, "range_ms": None, "confidence": "INSUFFICIENT_DATA",
-                        "reason": "Static source patterns and clock/memory specifications alone cannot establish call frequency, input sizes, engine behavior, or API latency.",
-                        "required_inputs": ["bounded input sizes / loop iteration counts", "target-runtime benchmark calibration", "API-specific latency/throughput ranges"]}
+    runtime_estimate = estimate_runtime(args.profile, workload, calibration)
     if calibration is not None:
         runtime_estimate["calibration_loaded"] = True
-        runtime_estimate["calibration_profile"] = calibration.get("profile")
-        runtime_estimate["reason"] = "Calibration file was loaded, but this version does not yet compute a total runtime unless every workload dimension is modeled; no unsupported partial value is presented."
+    if workload is not None:
+        runtime_estimate["workload_loaded"] = True
     report = {"tool": "agentkit_js_load", "version": VERSION, "generated_utc": datetime.now(timezone.utc).isoformat(),
               "root": str(root), "profile": profile, "files_scanned": len(metrics), "metrics": metrics,
               "findings": sorted(findings, key=lambda x: (x["path"], x["line"], x["title"])),
@@ -249,7 +339,7 @@ def main() -> int:
                                "Tier names are labels, not hidden performance multipliers.",
                                "A clock rate is not a reliable substitute for engine-specific throughput benchmarks.",
                                "Static call-site findings do not prove dynamic call counts or dead code.",
-                               "Runtime estimate remains unavailable rather than inventing precision when required inputs are missing."]}
+                               "Runtime estimate remains unavailable rather than inventing precision when workload bounds or calibrated rates are missing."]}
     log_dir = Path(args.log_dir)
     if not log_dir.is_absolute():
         log_dir = root / log_dir
@@ -267,7 +357,11 @@ def main() -> int:
     for item in report["findings"]:
         print(f"[{item['priority']}/{item['detection_confidence']}] {item['category']} {item['path']}:{item['line']} — {item['title']}: {item['detail']}")
     print(f"Scanned {len(metrics)} JS/TS file(s); findings: {len(findings)}.")
-    print(f"Runtime estimate: unavailable without workload bounds and target-runtime calibration. Log: {log}")
+    if runtime_estimate["milliseconds"] is None:
+        print("Runtime estimate: unavailable — " + runtime_estimate["reason"])
+    else:
+        print(f"Estimated runtime: {runtime_estimate['range_ms'][0]:.3f}–{runtime_estimate['range_ms'][1]:.3f} ms (midpoint {runtime_estimate['milliseconds']:.3f} ms; confidence={runtime_estimate['confidence']}).")
+    print(f"Analysis log: {log}")
     return 0
 
 if __name__ == "__main__":
