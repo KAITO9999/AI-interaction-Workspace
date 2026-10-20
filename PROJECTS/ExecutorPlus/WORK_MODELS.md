@@ -58,3 +58,12 @@ Status: requirements and architecture planning active; no application implementa
 - Destructive cleanup, external publication, credential changes, or irreversible actions require the appropriate explicit approval.
 - A connector cannot force the ChatGPT host to remain alive or guarantee mid-inference queue injection unless the host provides a supported API for it. Implement capability detection and honest fallbacks.
 - Keep app authentication (candidate: Auth0) separate from MCP client authentication, storage-provider authorization, and host-platform authorization.
+
+
+## Model attribution and characteristics catalog
+
+- Whenever work records refer to differences between models or attribute a result to a model, state the exact displayed model name/version and provider where known. If unavailable, write "unknown/unverified"; do not infer identity from style.
+- Maintain model characteristics in the separate `MODEL_CATALOG.md`, not as an informal unsourced list in this workflow document. Initial requested profile labels are GPT-6, Sonnet 5, and Grok 4.5; treat each as unverified until its identity and claims are supported by reliable sources.
+- Every factual model claim must include source URL(s) and publication/access date. Prefer official model cards, release notes and API documentation; use benchmark papers/datasets for benchmark claims and record setup, date, task, and scoring method.
+- Mark each profile field as source-confirmed, independently measured, inferred, disputed, or unknown. Record conflicts and limits; never fill gaps by guessing.
+- A second named model may independently review omissions, consistency, security, and acceptance evidence. Its output is advisory and must be checked against requirements, sources, and tests. Structured self-audits must flag uncertainty and must not silently rewrite requirements.
