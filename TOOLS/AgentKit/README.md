@@ -148,3 +148,26 @@ Directory mode processes ZIPs sequentially in sorted order, one archive at a tim
 The planner lists candidate commands and their PATH locations without executing them, plus a fallback and its limitations. It never installs or replaces commands.
 
 Standard commands remain preferred when present. Fallbacks are used only when no preferred command is detected, unless `--prefer-fallback` is explicitly supplied.
+
+
+### 10. Confidence-ranked code, duplication, and performance audit
+
+    python3 TOOLS/AgentKit/agentkit_code_audit.py path/to/project --json /tmp/code-audit.json
+    python3 TOOLS/AgentKit/agentkit_code_audit.py path/to/project --log-dir .agentkit-logs
+
+Findings now carry `detection_confidence` and `review_recommended`. HIGH confidence means the observed fact is directly established (for example exact file hashes or a parser result); it does not mean that the finding is necessarily a bug. MEDIUM/LOW findings are marked for confirmation. Duplicate files, repeated substantial source lines, and identical normalized Python function bodies are reported as duplication candidates. Repetition is not automatically wrong; common boilerplate, generated code, and intentional compatibility wrappers can be legitimate.
+
+Execution-time and processing-volume observations are integrated into the same audit tool. Two separate append-only logs are produced: `.agentkit-logs/code-audit-findings.jsonl` and `.agentkit-logs/code-audit-performance.jsonl`. The performance log records the actual audit elapsed time, files/bytes/lines scanned, and throughput. It does not claim to predict the runtime of the audited program; static loop/sleep signals are only leads for review.
+
+### 11. Quick test runs and runtime calibration
+
+    python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --list
+    python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --quick
+    python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --skip integration
+    python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project
+
+The runner probes host metadata before estimating: OS, architecture, Python version, CPU count, available memory metadata, and Minecraft add-on/package/manifest signals. Runtime estimates are produced only from prior successful/recorded runs with matching environment and identical test selection; without calibration data it explicitly says the estimate is unavailable. Estimates use the median of matching history, with confidence based on sample count. Minecraft-like projects always downgrade estimates and print a warning because game engine/version, script APIs, target device, and in-game state may not match the host environment. Inspect the actual target environment before trusting timing estimates.
+
+Quick mode selects tests whose IDs contain `smoke`, `fast`, `sanity`, or `critical`; explicit `--skip` filters test IDs by substring. Every skipped test is written to `.agentkit-logs/test-skips.jsonl`; run durations and environment fingerprints are written to `.agentkit-logs/test-runtime.jsonl`. A zero-test selection is an error, not success. Quick/skip runs are partial verification and must not replace a full test run before release or merge.
+
+The first run on a new environment has no calibrated estimate by design. Matching OS/Python/CPU metadata still cannot fully account for virtualization, load, power limits, external services, Minecraft runtime behavior, or other environment-specific variables.
