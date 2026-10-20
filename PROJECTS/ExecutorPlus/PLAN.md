@@ -7,7 +7,9 @@ Status: planned; application implementation has not started.
 - **Outcome:** a capability matrix separates features implementable in the app/MCP server from features requiring a supported ChatGPT host API.
 - **Prerequisite:** inspect available host APIs, connector/plugin constraints, Android background execution rules, and authentication requirements.
 - **Checks:** classify each feature as supported, conditional, fallback-only, or unavailable; document evidence and test method.
-- **Complete when:** mid-inference queue insertion, connector lifecycle control, notification delivery, visible AI-log capture, conversation editing, and non-MCP GPT access have explicit supported-path/fallback behavior; no unsupported capability is represented as guaranteed.
+- **Queue decision:** implement the queue in the app. If a request arrives while a task is running, show a clear “キューに追加しました” status, persist the request, let the current task reach a safe stopping point, then ask the user to confirm/review the queued request before execution. Do not pretend this inserts a message into the active model generation if the host does not support that.
+- **GPT access decision:** plan both (a) native/in-host access using supported ChatGPT/plugin/app integration surfaces and (b) direct API access using official API credentials/authorization. Keep these as separate adapters with separate permission, cost, context, and capability explanations; do not scrape private app internals or collect account passwords.
+- **Complete when:** queueing, connector lifecycle control, notification delivery, visible AI-log capture, conversation editing, and both GPT access routes have explicit supported-path/fallback behavior; no unsupported capability is represented as guaranteed.
 
 ## P1 — Establish the project records and requirements baseline
 
@@ -33,6 +35,7 @@ Status: planned; application implementation has not started.
 
 - **Outcome:** app can browse workspaces, view input/output records exposed by the integration, inspect artifacts, review checklist progress, and manage connector/MCP server lifecycle.
 - **Includes:** 「長期作業を検討…」 and 「長期作業を実行中…」 statuses; event notifications; user confirmation queue; app-visible error and resume controls; GPT-suggested follow-up ideas surfaced as suggestions, not silently executed.
+- **Queued request UX:** while a job is running, allow the user to submit another request into a durable app queue; show “キューに追加しました”; do not interrupt the current job mid-step. After the current job reaches a safe completion/checkpoint, display the queued request for user review/confirmation before starting it. Support reorder, cancel, edit, and dependency labels for queued requests.
 - **MCP lifecycle:** distribute supported MCP server packages through the app; manage installation, configuration, start/stop, update, health checks, logs, and recovery through the app, subject to platform permissions.
 - **Checks:** UI/accessibility tests, event-delivery tests, background/foreground transition tests, Android version compatibility.
 - **Complete when:** user can see current state and recover from a stopped or failed task without reconstructing it from chat history.
@@ -62,12 +65,23 @@ Status: planned; application implementation has not started.
 - **Storage selection:** let the user choose a supported destination/provider in app settings; treat selected locations as provider-specific URIs/handles, not assume every cloud provider behaves like a local filesystem path.
 - **StartPage and safe external text input:** provide StartPage access through the connector-management layer and a whitelist-based gateway for text entry into approved search fields/sites (e.g. StartPage, YouTube, Reddit); validate destination and payload, block arbitrary navigation/script execution, and log the action.
 - **Context handoff:** support three reduction levels; abbreviate items longer than 80 characters with an ellipsis and expose an expansion path; show the latest five items first, with older items paged in groups of five; show full content when the set contains ten or fewer items. Test boundary counts, Unicode length, empty sets, and expansion.
-- **Concurrent goals and queue:** allow independent tool goals to run concurrently when safe, record per-goal status, notify GPT of completed calls while other work continues, and support queued follow-up work only where the host supports it. Use bounded concurrency, cancellation, idempotency and conflict handling.
+- **Concurrent goals and queue:** allow independent tool goals to run concurrently when safe, record per-goal status, notify GPT of completed calls while other work continues, and implement queued follow-up requests in the app even if host-side mid-inference injection is unavailable. A queued request must wait until the active task reaches a safe stopping point, then require user review/confirmation before execution. Use bounded concurrency, cancellation, idempotency and conflict handling.
 - **Complete when:** every subfeature has tests, permissions and failure behavior documented, and a requirement-by-requirement gap check shows no omitted requirement.
 
 ## P9 — Connector management, conversation correction, and alternate GPT access
 
 - **Conversation self-correction/editing:** investigate supported APIs for editing or correcting a conversation through connector management. If the host does not permit editing existing messages, provide a transparent alternative such as a corrected follow-up, revision proposal, or exported edited copy; never claim to rewrite host history when it cannot.
 - **StartPage connector access:** manage the StartPage connection, access policy, approved destinations, and text-input allowlist from connector settings; keep the actual safe search-input gateway in P8.
-- **GPT access beyond MCP:** evaluate supported app/account integration routes that do not rely exclusively on MCP. Do not request or store the user's account password. Prefer official OAuth/delegated authorization or documented host APIs; if no supported route exists, document the limitation and provide a safe manual handoff instead.
+- **GPT access beyond MCP — provide both routes:** (A) native/in-host integration through supported ChatGPT app/plugin/extension surfaces, with capability limits explicitly documented; and (B) direct API access through the official API using a separately configured API credential/authorization flow, with usage/cost limits and context transfer controls. Keep adapters, permissions and audit logs separate. Do not scrape private app internals, bypass platform restrictions, or request/store the user's ChatGPT account password. If a native route is unavailable, provide the supported fallback; if API access is unconfigured, offer setup instructions rather than silently failing.
 - **Complete when:** the host capability matrix documents whether each feature is native, API-backed, fallback-only, or unavailable, with permission/security review and tests for every implemented path.
+
+
+## P10 — AI handoff bundle and task observability (recommended addition)
+
+- **Outcome:** every long or multi-tool task can be handed to another agent/session without relying on hidden chat history.
+- **Handoff bundle:** objective and acceptance criteria; current plan/checklist and completion percentage; current state and next action; constraints and decisions with rationale; relevant files/paths and exact versions/commit IDs; commands executed and summarized outputs; tests run with pass/fail evidence; unresolved risks/blockers; required permissions/credentials by *name only* (never secret values); dependency graph; rollback/recovery steps.
+- **Change/provenance log:** record who/what changed which artifact, when, why, and which validation ran. Keep append-only event records where practical and distinguish observed facts from AI assumptions.
+- **Context packet builder:** create a compact, redacted, project-specific context packet with source links and hashes; include only minimum relevant context and avoid cross-conversation leakage. Support export/import for another model/agent.
+- **Failure/retry protocol:** classify transient/permanent/permission/conflict failures; bounded retries with backoff; idempotency keys; checkpoint before destructive actions; require confirmation for irreversible or external side effects.
+- **Acceptance/verification packet:** map each acceptance criterion to evidence, tests, screenshots/log references, and known limitations; do not treat generated claims as proof.
+- **Complete when:** a new session/agent can resume from the bundle, independently verify the state, and avoid repeating already-completed work.
