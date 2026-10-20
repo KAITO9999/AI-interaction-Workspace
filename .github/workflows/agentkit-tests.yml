@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile Python source
-        run: python -m py_compile TOOLS/AgentKit/agentkit.py TOOLS/AgentKit/agentkit_ext.py TOOLS/AgentKit/agentkit_resolve.py TOOLS/AgentKit/agentkit_code_audit.py TOOLS/AgentKit/agentkit_zipset.py TOOLS/AgentKit/agentkit_toolplan.py TOOLS/AgentKit/agentkit_testfast.py TOOLS/AgentKit/agentkit_js_load.py scripts/check_change_ledger.py
+        run: python -m py_compile TOOLS/AgentKit/agentkit.py TOOLS/AgentKit/agentkit_ext.py TOOLS/AgentKit/agentkit_resolve.py TOOLS/AgentKit/agentkit_code_audit.py TOOLS/AgentKit/agentkit_zipset.py TOOLS/AgentKit/agentkit_toolplan.py TOOLS/AgentKit/agentkit_testfast.py TOOLS/AgentKit/agentkit_js_load.py TOOLS/AgentKit/agentkit_lang_audit.py TOOLS/AgentKit/agentkit_virtual_edit.py TOOLS/AgentKit/agentkit_mcp_bridge.py TOOLS/AgentKit/agentkit_bundle.py TOOLS/AgentKit/agentkit_route_probe.py scripts/check_change_ledger.py
       - name: Check POSIX shell syntax
         run: sh -n TOOLS/AgentKit/agentkit TOOLS/AgentKit/agentkit.sh
       - name: Run AgentKit tests
@@ -37,6 +37,11 @@ jobs:
           export function start(items) { return poll(items); }
           JS
           python TOOLS/AgentKit/agentkit_js_load.py --root "$RUNNER_TEMP" --file sample.js --profile mid --workload-template "$RUNNER_TEMP/agentkit-js-workload-template.json" --json "$RUNNER_TEMP/agentkit-js-load.json" --log-dir "$RUNNER_TEMP/agentkit-js-load-logs"
+          python TOOLS/AgentKit/agentkit_js_load.py --root "$RUNNER_TEMP" --file sample.js --json-dir "$RUNNER_TEMP/agentkit-profiles" --workload-template requested
+          mkdir -p "$RUNNER_TEMP/lang-fixture"
+          printf '%s\\n' '<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-sdk android:minSdkVersion="30"/><uses-feature android:glEsVersion="0x00030000" android:required="true"/></manifest>' > "$RUNNER_TEMP/lang-fixture/AndroidManifest.xml"
+          printf '%s\\n' 'int main() { return 0; }' > "$RUNNER_TEMP/lang-fixture/main.cpp"
+          python TOOLS/AgentKit/agentkit_lang_audit.py --root "$RUNNER_TEMP/lang-fixture" --json "$RUNNER_TEMP/agentkit-lang-audit.json" --log-dir "$RUNNER_TEMP/agentkit-lang-logs"
       - name: Validate pull-request change provenance
         run: python scripts/check_change_ledger.py
       - name: Check local Markdown links
