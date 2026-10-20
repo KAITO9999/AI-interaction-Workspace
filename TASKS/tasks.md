@@ -2,10 +2,14 @@
 
 ## Executor++
 
-- [ ] Validate host capabilities for mid-inference queue injection, asynchronous connector execution, connector lifecycle control, and accessible input/output logs; document supported and fallback paths.
+- [ ] Validate host capabilities for asynchronous connector execution, connector lifecycle control, and accessible input/output logs; document supported and fallback paths.
+- [ ] Implement app-side durable request queue: show “キューに追加しました”, let the current task finish to a safe checkpoint, then ask the user to review/confirm before execution; support edit/reorder/cancel/dependencies.
+- [ ] Implement both supported native/in-host GPT integration and official API access as separate adapters, including distinct permissions, context handling, cost limits and audit logs.
 - [ ] Research long-horizon agent reliability, checklist/checkpoint design, project planning, and effective coding/review workflows; add sourced help.
 - [ ] Implement the long-work checklist lifecycle with mandatory initial, intermediate, and final checks.
 - [ ] Implement conversation-isolated durable MCP workspaces, artifacts, event logs, dependencies, and resume checkpoints.
+- [ ] Implement an AI handoff bundle (goal/acceptance criteria, status/next action, decisions, paths and versions, command/test evidence, blockers/risks, dependency graph and recovery steps) plus redacted context export/import.
+- [ ] Add change provenance, bounded retry/idempotency, destructive-action checkpoints, and an acceptance-evidence packet.
 - [ ] Implement staged termination guard: first refusal with remaining items; second request prompts a handoff plan; subsequent request recommends dependency/omission review, without trapping the user indefinitely.
 - [ ] Implement app-visible progress states, workspace inspection, notifications, and user-confirmation queue.
 - [ ] Evaluate Android battery-optimization exemption flow and document OS/background execution limitations.
