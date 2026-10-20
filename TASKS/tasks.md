@@ -1,5 +1,17 @@
 # Tasks
 
+## Executor++
+
+- [ ] Validate host capabilities for mid-inference queue injection, asynchronous connector execution, connector lifecycle control, and accessible input/output logs; document supported and fallback paths.
+- [ ] Research long-horizon agent reliability, checklist/checkpoint design, project planning, and effective coding/review workflows; add sourced help.
+- [ ] Implement the long-work checklist lifecycle with mandatory initial, intermediate, and final checks.
+- [ ] Implement conversation-isolated durable MCP workspaces, artifacts, event logs, dependencies, and resume checkpoints.
+- [ ] Implement staged termination guard: first refusal with remaining items; second request prompts a handoff plan; subsequent request recommends dependency/omission review, without trapping the user indefinitely.
+- [ ] Implement app-visible progress states, workspace inspection, notifications, and user-confirmation queue.
+- [ ] Evaluate Android battery-optimization exemption flow and document OS/background execution limitations.
+- [ ] Evaluate storage adapters, app authentication (Auth0 candidate), and MCP authentication separately.
+- [ ] Design and validate the Executor++ icon; run static, integration, security-isolation, and Android runtime checks.
+
 ## Workspace project format and prompt routing
 
 - [x] Define `WORK_MODELS.md`, `PLAN.md`, `CACHE.md` and `IN_PROGRESS.md` as the canonical project record files.
