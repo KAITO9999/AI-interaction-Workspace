@@ -2,7 +2,7 @@
 
 Each project uses the same four canonical files, with no duplicate plan/cache/editing routes:
 
-- [Executor++ work models](./ExecutorPlus/WORK_MODELS.md), [plan](./ExecutorPlus/PLAN.md), [cache](./ExecutorPlus/CACHE.md), and [active handoff](./ExecutorPlus/IN_PROGRESS.md).
+- [Executor++ work models](./ExecutorPlus/WORK_MODELS.md), [plan](./ExecutorPlus/PLAN.md), [model characteristics catalog](./ExecutorPlus/MODEL_CATALOG.md), [cache](./ExecutorPlus/CACHE.md), and [active handoff](./ExecutorPlus/IN_PROGRESS.md).
 - [ReForge Visuals work models](./ReForge-Visuals/WORK_MODELS.md), [plan](./ReForge-Visuals/PLAN.md), [cache](./ReForge-Visuals/CACHE.md), and [active handoff](./ReForge-Visuals/IN_PROGRESS.md).
 - [AgentKit work models](./AgentKit/WORK_MODELS.md), [plan](./AgentKit/PLAN.md), [cache](./AgentKit/CACHE.md), and [active handoff](./AgentKit/IN_PROGRESS.md).
 
