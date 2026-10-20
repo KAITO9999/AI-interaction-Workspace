@@ -30,7 +30,7 @@ class ResolverTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             valid.write_text("{bad", encoding="utf-8")
             result = run("json-check", str(valid), "--prefer-fallback", env=self.empty_path_env(root / "empty"))
-            self.assertEqual(result.returncode, 1)
+            self.assertEqual(result.returncode, 5)
             self.assertIn("INVALID JSON", result.stderr)
 
     def test_search_fallback_skips_dependency_directories(self):
@@ -107,6 +107,40 @@ class ResolverTests(unittest.TestCase):
             self.assertIn("install fd", capture.read_text(encoding="utf-8"))
             self.assertIn("Preferred command installation failed", result.stderr)
             self.assertIn("fake-find-ran", result.stdout)
+
+
+    def test_json_fallback_invalid_json_uses_jq_exit_code(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "invalid.json"
+            target.write_text('{"ok": }\n', encoding="utf-8")
+            result = run("json-check", str(target), "--prefer-fallback", env=self.empty_path_env(root / "empty"))
+            self.assertEqual(result.returncode, 5, result.stdout + result.stderr)
+            self.assertIn("INVALID JSON", result.stderr)
+
+    def test_json_fallback_empty_input_matches_jq_empty_filter(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "empty.json"
+            target.write_text("  \n\t", encoding="utf-8")
+            result = run("json-check", str(target), "--prefer-fallback", env=self.empty_path_env(root / "empty"))
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_json_fallback_accepts_multiple_json_texts_like_jq(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "stream.json"
+            target.write_text('{"one": 1}\n[2, 3]\nnull\n', encoding="utf-8")
+            result = run("json-check", str(target), "--prefer-fallback", env=self.empty_path_env(root / "empty"))
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_json_fallback_missing_file_uses_jq_system_error_exit_code(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "missing.json"
+            result = run("json-check", str(target), "--prefer-fallback", env=self.empty_path_env(root / "empty"))
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertIn("ERROR reading file", result.stderr)
 
 
 if __name__ == "__main__":

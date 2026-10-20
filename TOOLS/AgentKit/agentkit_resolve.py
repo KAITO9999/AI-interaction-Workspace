@@ -69,15 +69,38 @@ def fallback(task: str, args: argparse.Namespace) -> int:
     if task == "json-check":
         path = Path(args.target)
         try:
-            with path.open("r", encoding="utf-8-sig") as handle:
-                json.load(handle)
+            text = path.read_text(encoding="utf-8-sig")
         except OSError as exc:
+            # jq reports file-open/read failures as system errors (exit 2).
             print(f"ERROR reading file: {exc}", file=sys.stderr)
             return 2
-        except (UnicodeError, json.JSONDecodeError) as exc:
+        except UnicodeError as exc:
+            # Invalid input encoding is a parse failure, like malformed JSON.
             print(f"INVALID JSON: {exc}", file=sys.stderr)
-            return 1
-        print(f"VALID JSON: {path}")
+            return 5
+
+        def reject_non_json_constant(value: str) -> None:
+            raise ValueError(f"Invalid JSON constant: {value}")
+
+        decoder = json.JSONDecoder(parse_constant=reject_non_json_constant)
+        offset = 0
+        value_count = 0
+        while True:
+            while offset < len(text) and text[offset].isspace():
+                offset += 1
+            if offset >= len(text):
+                # jq's empty filter succeeds for an empty/whitespace-only stream.
+                break
+            try:
+                _, offset = decoder.raw_decode(text, offset)
+            except (json.JSONDecodeError, ValueError) as exc:
+                # jq's parse error status is 5; 1 is reserved for jq -e's
+                # false/null result and is not the status of the empty filter.
+                print(f"INVALID JSON: {exc}", file=sys.stderr)
+                return 5
+            value_count += 1
+        suffix = " (empty input stream)" if value_count == 0 else ""
+        print(f"VALID JSON: {path}{suffix}")
         return 0
     if task == "search":
         if not args.pattern:
