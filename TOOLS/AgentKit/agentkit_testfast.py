@@ -111,11 +111,11 @@ def main() -> int:
         return 2
     if args.quick:
         quick_tokens = ("smoke", "fast", "sanity", "critical")
-        included = [test for test in tests if any(token in test.id().lower() for token in quick_tokens)]
+        included = [test for test in tests if any(token in (test.id() + " " + getattr(test, "_testMethodName", "")).lower() for token in quick_tokens)]
     else:
         included = list(tests)
     skipped_by_mode = [test for test in tests if test not in included]
-    explicitly_skipped = [test for test in included if any(value.lower() in test.id().lower() for value in args.skip)]
+    explicitly_skipped = [test for test in included if any(value.lower() in (test.id() + " " + getattr(test, "_testMethodName", "")).lower() for value in args.skip)]
     skipped = skipped_by_mode + explicitly_skipped
     selected = [test for test in included if test not in explicitly_skipped]
     if not selected:
