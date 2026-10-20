@@ -14,3 +14,14 @@
 - **Prerequisite:** measured data from named device classes or a user-approved hardware matrix.
 - **Complete when:** every added parameter has a source or measurement and an explicit rationale; do not invent values to fill gaps.
 - **Current state:** RAM budgets are set to 4/8/12/16 GB; no other hardware parameters were found in the current AgentKit source to tune.
+
+
+## P3 — Agent capability toolchain (research-backed)
+
+- **Outcome:** AgentKit can discover, safely enable, and verify tools that materially improve practical task completion.
+- **Priority:** (1) Playwright CLI/MCP/Test for browser interaction and UI regression; (2) workspace-scoped shell/filesystem/patch adapters; (3) deterministic evaluation and regression-test evidence; (4) separately named reviewer-agent integration; (5) MCP tool-surface/security audit.
+- **Research record:** see [AGENT_CAPABILITY_TOOLS.md](../../TOOLS/AgentKit/AGENT_CAPABILITY_TOOLS.md) for source URLs, integration rules and acceptance criteria.
+- **Implementation sequence:** discover installed tools without executing unknown binaries; record exact observed versions and confidence; run bounded help/version/smoke checks; implement only adapters supported by evidence; emit structured evidence packets; add recovery and adversarial tests.
+- **Safety:** no automatic package installs, unrestricted shell, hidden credential collection, or broad browser permissions. Require explicit workspace roots, timeouts, output caps, least privilege and approval for consequential external actions.
+- **Complete when:** availability probes, safe adapters, result schema, unit tests, integration tests and security/fault-injection tests pass in a named environment. A plan or static check is not runtime proof.
+- **Current state:** research and design recorded; tool installation and runtime integration not yet performed.
