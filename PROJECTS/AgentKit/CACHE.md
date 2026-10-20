@@ -1,6 +1,6 @@
 # AgentKit — cache
 
-Status: smartphone profile preflight implementation added; CI validation pending.
+Status: smartphone profile preflight implementation and CI validation passed; Android runtime validation pending.
 Last reviewed: 2026-10-21
 
 ## Verified source facts
@@ -18,4 +18,4 @@ Last reviewed: 2026-10-21
 
 ## Completed items moved from PLAN
 
-No plan items completed yet. CI and implementation review are pending.
+| 2026-10-21 | Add smartphone profile preflight and automated compatibility gate | PASS; 39 AgentKit unit tests passed in GitHub Actions on Ubuntu; Python compilation and shell syntax checks passed; provenance validation passed; 115 repository-local Markdown links checked. Pull request: [#13](https://github.com/KAITO9999/AI-interaction-Workspace/pull/13). Physical-device/emulator tests remain pending.
