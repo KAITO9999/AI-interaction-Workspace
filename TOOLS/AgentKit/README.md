@@ -192,6 +192,8 @@ Workload file (the counts must come from a documented scenario or measured execu
 ```json
 {
   "schema_version": 1,
+  "scenario": "one complete update tick for 1000 entities",
+  "assumptions": ["CPU and memory counts describe one tick", "API count is the number of calls in one tick"],
   "operations": [
     {"kind": "cpu_ops", "count": 1000000},
     {"kind": "memory_bytes", "count": 1048576},
@@ -200,12 +202,16 @@ Workload file (the counts must come from a documented scenario or measured execu
 }
 ```
 
-Calibration file example (rates and latency ranges must be measured on the selected target runtime/profile; the values here are illustrative only and must not be copied as authoritative benchmarks):
+Calibration file example (rates and latency ranges must be measured on the selected target runtime/profile; the values here are illustrative only and must not be copied as authoritative benchmarks. Include measurement method and source URLs; the tool checks that evidence is recorded but does not verify its contents):
 
 ```json
 {
   "schema_version": 1,
   "target_runtime": "name and version of the measured JS runtime",
+  "evidence": {
+    "measurement_method": "benchmark harness, input shape, and warm/cold-run policy",
+    "source_urls": ["https://v8.dev/blog/real-world-performance"]
+  },
   "profiles": {
     "mid": {
       "samples": 10,
