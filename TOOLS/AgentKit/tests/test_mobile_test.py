@@ -13,6 +13,12 @@ def run(*args):
 
 
 class MobileTestPreflightTests(unittest.TestCase):
+    def test_help_documents_all_options(self):
+        result = run("--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for option in ("--root", "--profile", "--android-version", "--min-sdk", "--json"):
+            self.assertIn(option, result.stdout)
+
     def make_project(self, root: Path, min_sdk: int | None = 21) -> Path:
         app = root / "app" / "src" / "main"
         app.mkdir(parents=True)
