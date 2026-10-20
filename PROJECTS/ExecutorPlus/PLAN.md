@@ -7,13 +7,13 @@ Status: planned; application implementation has not started.
 - **Outcome:** a capability matrix separates features implementable in the app/MCP server from features requiring a supported ChatGPT host API.
 - **Prerequisite:** inspect available host APIs, connector/plugin constraints, Android background execution rules, and authentication requirements.
 - **Checks:** classify each feature as supported, conditional, fallback-only, or unavailable; document evidence and test method.
-- **Complete when:** mid-inference queue insertion, connector lifecycle control, notification delivery, and visible AI-log capture have explicit supported-path/fallback behavior; no unsupported capability is represented as guaranteed.
+- **Complete when:** mid-inference queue insertion, connector lifecycle control, notification delivery, visible AI-log capture, conversation editing, and non-MCP GPT access have explicit supported-path/fallback behavior; no unsupported capability is represented as guaranteed.
 
 ## P1 — Establish the project records and requirements baseline
 
 - **Outcome:** requirements, architecture decisions, work models, and handoff rules are stored in this project record.
 - **Complete when:** the four canonical project files exist and requirements are cross-checked against the user request.
-- **State:** project record created on the current work branch; cross-check pending.
+- **State:** project record created on the current work branch; requirement coverage review pending.
 
 ## P2 — Research-backed long-work checklist and termination state machine
 
@@ -33,6 +33,7 @@ Status: planned; application implementation has not started.
 
 - **Outcome:** app can browse workspaces, view input/output records exposed by the integration, inspect artifacts, review checklist progress, and manage connector/MCP server lifecycle.
 - **Includes:** 「長期作業を検討…」 and 「長期作業を実行中…」 statuses; event notifications; user confirmation queue; app-visible error and resume controls; GPT-suggested follow-up ideas surfaced as suggestions, not silently executed.
+- **MCP lifecycle:** distribute supported MCP server packages through the app; manage installation, configuration, start/stop, update, health checks, logs, and recovery through the app, subject to platform permissions.
 - **Checks:** UI/accessibility tests, event-delivery tests, background/foreground transition tests, Android version compatibility.
 - **Complete when:** user can see current state and recover from a stopped or failed task without reconstructing it from chat history.
 
@@ -44,8 +45,8 @@ Status: planned; application implementation has not started.
 
 ## P6 — Battery and notification controls
 
-- **Outcome:** opt-in battery-optimization exemption guidance and robust progress/attention notifications.
-- **Checks:** permission denied, app force-stop, Doze/background restrictions, notification permission denied, duplicate/reordered events, and retry after network loss.
+- **Outcome:** low-cost standby/keep-alive is evaluated as an app feature, alongside opt-in battery-optimization exemption guidance and robust progress/attention notifications.
+- **Checks:** permission denied, app force-stop, Doze/background restrictions, notification permission denied, duplicate/reordered events, and retry after network loss. Measure battery/network cost rather than claiming “always on” without measurements.
 - **Complete when:** limitations are explained, notifications are not falsely guaranteed, and the user can resume from persisted state.
 
 ## P7 — Verification, release preparation and icon
@@ -59,7 +60,14 @@ Status: planned; application implementation has not started.
 - **Outcome:** implement the earlier Executor++ requirements that are separate from long-work mode and ensure they are not lost while building the app.
 - **Asset cache:** accept image, GIF, video, text, JavaScript, and other supported file types; GIF-to-video conversion may be used as an operational representation while retaining original-file provenance. At inference completion, summarize artifacts by storage location/group/folder, count, filename, format, size, and original/derived relation. Ask the user what to retain; discard unselected temporary items according to an explicit retention policy.
 - **Storage selection:** let the user choose a supported destination/provider in app settings; treat selected locations as provider-specific URIs/handles, not assume every cloud provider behaves like a local filesystem path.
-- **Safe external text input:** provide a whitelist-based gateway for text entry into approved search fields/sites (e.g. StartPage, YouTube, Reddit); validate destination and payload, block arbitrary navigation/script execution, and log the action.
+- **StartPage and safe external text input:** provide StartPage access through the connector-management layer and a whitelist-based gateway for text entry into approved search fields/sites (e.g. StartPage, YouTube, Reddit); validate destination and payload, block arbitrary navigation/script execution, and log the action.
 - **Context handoff:** support three reduction levels; abbreviate items longer than 80 characters with an ellipsis and expose an expansion path; show the latest five items first, with older items paged in groups of five; show full content when the set contains ten or fewer items. Test boundary counts, Unicode length, empty sets, and expansion.
 - **Concurrent goals and queue:** allow independent tool goals to run concurrently when safe, record per-goal status, notify GPT of completed calls while other work continues, and support queued follow-up work only where the host supports it. Use bounded concurrency, cancellation, idempotency and conflict handling.
 - **Complete when:** every subfeature has tests, permissions and failure behavior documented, and a requirement-by-requirement gap check shows no omitted requirement.
+
+## P9 — Connector management, conversation correction, and alternate GPT access
+
+- **Conversation self-correction/editing:** investigate supported APIs for editing or correcting a conversation through connector management. If the host does not permit editing existing messages, provide a transparent alternative such as a corrected follow-up, revision proposal, or exported edited copy; never claim to rewrite host history when it cannot.
+- **StartPage connector access:** manage the StartPage connection, access policy, approved destinations, and text-input allowlist from connector settings; keep the actual safe search-input gateway in P8.
+- **GPT access beyond MCP:** evaluate supported app/account integration routes that do not rely exclusively on MCP. Do not request or store the user's account password. Prefer official OAuth/delegated authorization or documented host APIs; if no supported route exists, document the limitation and provide a safe manual handoff instead.
+- **Complete when:** the host capability matrix documents whether each feature is native, API-backed, fallback-only, or unavailable, with permission/security review and tests for every implemented path.
