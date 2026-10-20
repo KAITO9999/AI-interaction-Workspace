@@ -13,7 +13,7 @@ Status: planned; application implementation has not started.
 
 - **Outcome:** requirements, architecture decisions, work models, and handoff rules are stored in this project record.
 - **Complete when:** the four canonical project files exist and requirements are cross-checked against the user request.
-- **State:** project record created on the current work branch; review/validation pending.
+- **State:** project record created on the current work branch; cross-check pending.
 
 ## P2 — Research-backed long-work checklist and termination state machine
 
@@ -32,7 +32,7 @@ Status: planned; application implementation has not started.
 ## P4 — App workspace, connector lifecycle and progress UI
 
 - **Outcome:** app can browse workspaces, view input/output records exposed by the integration, inspect artifacts, review checklist progress, and manage connector/MCP server lifecycle.
-- **Includes:** 「長期作業を検討…」 and 「長期作業を実行中…」 statuses; event notifications; user confirmation queue; app-visible error and resume controls.
+- **Includes:** 「長期作業を検討…」 and 「長期作業を実行中…」 statuses; event notifications; user confirmation queue; app-visible error and resume controls; GPT-suggested follow-up ideas surfaced as suggestions, not silently executed.
 - **Checks:** UI/accessibility tests, event-delivery tests, background/foreground transition tests, Android version compatibility.
 - **Complete when:** user can see current state and recover from a stopped or failed task without reconstructing it from chat history.
 
@@ -53,3 +53,13 @@ Status: planned; application implementation has not started.
 - **Outcome:** reproducible test results, help documentation, app/MCP packaging plan, and product icon asset.
 - **Checks:** unit/integration tests, static checks, Android runtime test on a supported environment, security review of workspace isolation, dependency/omission audit, and user-facing capability claims review.
 - **Complete when:** evidence and known limitations are recorded; no runtime behavior is marked verified without an observed test.
+
+## P8 — Asset cache, safe web input, context handoff and concurrent goals
+
+- **Outcome:** implement the earlier Executor++ requirements that are separate from long-work mode and ensure they are not lost while building the app.
+- **Asset cache:** accept image, GIF, video, text, JavaScript, and other supported file types; GIF-to-video conversion may be used as an operational representation while retaining original-file provenance. At inference completion, summarize artifacts by storage location/group/folder, count, filename, format, size, and original/derived relation. Ask the user what to retain; discard unselected temporary items according to an explicit retention policy.
+- **Storage selection:** let the user choose a supported destination/provider in app settings; treat selected locations as provider-specific URIs/handles, not assume every cloud provider behaves like a local filesystem path.
+- **Safe external text input:** provide a whitelist-based gateway for text entry into approved search fields/sites (e.g. StartPage, YouTube, Reddit); validate destination and payload, block arbitrary navigation/script execution, and log the action.
+- **Context handoff:** support three reduction levels; abbreviate items longer than 80 characters with an ellipsis and expose an expansion path; show the latest five items first, with older items paged in groups of five; show full content when the set contains ten or fewer items. Test boundary counts, Unicode length, empty sets, and expansion.
+- **Concurrent goals and queue:** allow independent tool goals to run concurrently when safe, record per-goal status, notify GPT of completed calls while other work continues, and support queued follow-up work only where the host supports it. Use bounded concurrency, cancellation, idempotency and conflict handling.
+- **Complete when:** every subfeature has tests, permissions and failure behavior documented, and a requirement-by-requirement gap check shows no omitted requirement.
