@@ -98,6 +98,40 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertIsNone(report["runtime_estimate"]["milliseconds"])
             self.assertTrue(any(item["category"] == "API_LOAD" for item in report["findings"]))
 
+    def test_js_load_uses_explicit_workload_and_profile_calibration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "main.js").write_text("function run() { fetch('/data'); }\\n", encoding="utf-8")
+            (root / "workload.json").write_text(json.dumps({
+                "schema_version": 1,
+                "operations": [
+                    {"kind": "cpu_ops", "count": 1000},
+                    {"kind": "memory_bytes", "count": 2000},
+                    {"kind": "api", "name": "fetch", "count": 2, "concurrency": 1},
+                ],
+            }), encoding="utf-8")
+            (root / "calibration.json").write_text(json.dumps({
+                "schema_version": 1,
+                "target_runtime": "test runtime",
+                "profiles": {
+                    "mid": {
+                        "samples": 10,
+                        "cpu_ops_per_second": [1000, 2000],
+                        "memory_bytes_per_second": [1000, 2000],
+                        "api_latency_ms": {"fetch": [10, 20]},
+                    }
+                },
+            }), encoding="utf-8")
+            result = run(JSLOAD, "--root", str(root), "--profile", "mid",
+                         "--workload-json", "workload.json", "--calibration-json", "calibration.json",
+                         "--json", "load.json")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            report = json.loads((root / "load.json").read_text(encoding="utf-8"))
+            estimate = report["runtime_estimate"]
+            self.assertEqual(estimate["range_ms"], [1021.0, 2042.0])
+            self.assertEqual(estimate["confidence"], "HIGH")
+            self.assertEqual(estimate["components"]["api_wait_ms"], [20.0, 40.0])
+
     def test_audit_rejects_file_outside_root(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "root"
