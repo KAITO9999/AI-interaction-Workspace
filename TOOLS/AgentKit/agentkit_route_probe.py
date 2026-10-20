@@ -43,7 +43,7 @@ def main():
  if a.plan_only:
   report={"generated_utc":datetime.now(timezone.utc).isoformat(),"mode":"plan-only","url_candidates":[{"url":url,"methods":["HEAD","GET Range bytes=0-0","GET Range bytes=0-4095"]} for url in urls],
           "limitations":["Plan-only lists candidate URL routes; it does not prove DNS resolution, authentication, permission, or download success."]}
-  try:Path(a.output).write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+  try:Path(a.output).write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
   except OSError as e:print(f"ERROR: cannot write report: {e}",file=sys.stderr);return 2
   print(json.dumps(report,ensure_ascii=False));return 0
  rows=[]
