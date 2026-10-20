@@ -114,6 +114,17 @@ class ResolverTests(unittest.TestCase):
             self.assertIn("alternative-command-ran", result.stdout)
             self.assertIn("注意、代替コマンドな為既存とは動作が異なります", result.stderr)
 
+    def test_explicit_environment_mismatch_blocks_install(self):
+        with tempfile.TemporaryDirectory() as directory:
+            env = self.empty_path_env(Path(directory) / "empty")
+            probe = run("json-check", ".", "--json-report", env=env)
+            current = json.loads(probe.stdout)["environment"]
+            other = next(item for item in ("termux", "linux", "wsl", "macos", "windows") if item != current)
+            result = run("json-check", "missing.json", "--install", "--environment", other, env=env)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("Environment selection does not enable remote installation", result.stderr)
+            self.assertNotIn("INSTALL ATTEMPT", result.stdout)
+
     def test_help_describes_environment_and_fallback(self):
         result = run("--help")
         self.assertEqual(result.returncode, 0)
