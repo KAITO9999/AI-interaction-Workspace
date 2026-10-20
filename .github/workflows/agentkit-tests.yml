@@ -20,12 +20,61 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile Python source
-        run: python -m py_compile TOOLS/AgentKit/agentkit.py TOOLS/AgentKit/agentkit_ext.py TOOLS/AgentKit/agentkit_resolve.py scripts/check_change_ledger.py
+        run: python -m py_compile TOOLS/AgentKit/agentkit.py TOOLS/AgentKit/agentkit_ext.py TOOLS/AgentKit/agentkit_resolve.py TOOLS/AgentKit/agentkit_code_audit.py TOOLS/AgentKit/agentkit_zipset.py TOOLS/AgentKit/agentkit_toolplan.py TOOLS/AgentKit/agentkit_testfast.py TOOLS/AgentKit/agentkit_js_load.py TOOLS/AgentKit/agentkit_lang_audit.py TOOLS/AgentKit/agentkit_virtual_edit.py TOOLS/AgentKit/agentkit_mcp_bridge.py TOOLS/AgentKit/agentkit_bundle.py TOOLS/AgentKit/agentkit_route_probe.py scripts/check_change_ledger.py
       - name: Check POSIX shell syntax
         run: sh -n TOOLS/AgentKit/agentkit TOOLS/AgentKit/agentkit.sh
       - name: Run AgentKit tests
         run: python -m unittest discover -s TOOLS/AgentKit/tests -v
+      - name: Smoke-test read-only audit tools
+        run: |
+          python TOOLS/AgentKit/agentkit_code_audit.py TOOLS/AgentKit --json "$RUNNER_TEMP/agentkit-code-audit.json" --log-dir "$RUNNER_TEMP/agentkit-audit-logs"
+          cat > "$RUNNER_TEMP/sample.js" <<'JS'
+          async function poll(items) {
+            for (const item of items) {
+              await fetch(item.url);
+            }
+          }
+          export function start(items) { return poll(items); }
+          JS
+          python TOOLS/AgentKit/agentkit_js_load.py --root "$RUNNER_TEMP" --file sample.js --profile mid --workload-template "$RUNNER_TEMP/agentkit-js-workload-template.json" --json "$RUNNER_TEMP/agentkit-js-load.json" --log-dir "$RUNNER_TEMP/agentkit-js-load-logs"
+          python TOOLS/AgentKit/agentkit_js_load.py --root "$RUNNER_TEMP" --file sample.js --json-dir "$RUNNER_TEMP/agentkit-profiles" --workload-template requested
+          mkdir -p "$RUNNER_TEMP/lang-fixture"
+          printf '%s\\n' '<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-sdk android:minSdkVersion="30"/><uses-feature android:glEsVersion="0x00030000" android:required="true"/></manifest>' > "$RUNNER_TEMP/lang-fixture/AndroidManifest.xml"
+          printf '%s\\n' 'int main() { return 0; }' > "$RUNNER_TEMP/lang-fixture/main.cpp"
+          python TOOLS/AgentKit/agentkit_lang_audit.py --root "$RUNNER_TEMP/lang-fixture" --json "$RUNNER_TEMP/agentkit-lang-audit.json" --log-dir "$RUNNER_TEMP/agentkit-lang-logs"
       - name: Validate pull-request change provenance
         run: python scripts/check_change_ledger.py
       - name: Check local Markdown links
         run: python scripts/check_markdown_links.py
+      - name: Build AgentKit tool bundle
+        run: |
+          python TOOLS/AgentKit/agentkit_bundle.py --root . --output agentkit-tools-bundle.zip \
+            --include TOOLS/AgentKit/README.md \
+            --include TOOLS/AgentKit/agentkit_js_load.py \
+            --include TOOLS/AgentKit/agentkit_lang_audit.py \
+            --include TOOLS/AgentKit/agentkit_code_audit.py \
+            --include TOOLS/AgentKit/agentkit_testfast.py \
+            --include TOOLS/AgentKit/agentkit_virtual_edit.py \
+            --include TOOLS/AgentKit/agentkit_mcp_bridge.py \
+            --include TOOLS/AgentKit/agentkit_bundle.py \
+            --include TOOLS/AgentKit/agentkit_route_probe.py \
+            --include TOOLS/AgentKit/agentkit_toolplan.py \
+            --include TOOLS/AgentKit/agentkit.py \
+            --include TOOLS/AgentKit/agentkit_ext.py \
+            --include TOOLS/AgentKit/agentkit_resolve.py \
+            --include TOOLS/AgentKit/agentkit_zipset.py \
+            --include TOOLS/AgentKit/agentkit_virtual_tools.json \
+            --include TOOLS/AgentKit/policies/01-runtime-profiles.md \
+            --include TOOLS/AgentKit/policies/02-language-platform-policy.md \
+            --include TOOLS/AgentKit/policies/03-environment-substitution.md \
+            --include TOOLS/AgentKit/policies/04-mcp-payload-bridge.md \
+            --include TOOLS/AgentKit/policies/05-virtual-edit-policy.md \
+            --include TOOLS/AgentKit/policies/06-bundle-and-route-policy.md \
+            --include TOOLS/AgentKit/policies/07-original-request-privacy.md
+      - name: Upload AgentKit bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentkit-tools-bundle
+          path: agentkit-tools-bundle.zip
+          if-no-files-found: error
+          retention-days: 14
