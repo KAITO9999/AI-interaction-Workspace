@@ -236,8 +236,8 @@ def load_workload(path: Path | None) -> dict | None:
         if not isinstance(operation, dict) or operation.get("kind") not in {"cpu_ops", "memory_bytes", "working_set_bytes", "api"}:
             raise ValueError(f"workload operation {index} must have kind cpu_ops, memory_bytes, working_set_bytes, or api")
         count = operation.get("count")
-        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
-            raise ValueError(f"workload operation {index} count must be a non-negative integer")
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0 or count > 10**18:
+            raise ValueError(f"workload operation {index} count must be an integer between 0 and 10^18")
         if operation["kind"] == "api":
             if not isinstance(operation.get("name"), str) or not operation["name"]:
                 raise ValueError(f"workload API operation {index} requires a non-empty name")
@@ -272,9 +272,14 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
     if not isinstance(target_runtime, str) or not target_runtime.strip():
         return unavailable_estimate("Calibration is missing target_runtime metadata.", ["calibration target_runtime"])
     def valid_range(value):
-        return (isinstance(value, list) and len(value) == 2
-                and all(not isinstance(item, bool) and isinstance(item, (int, float)) and item > 0 for item in value)
-                and value[0] <= value[1])
+        if not isinstance(value, list) or len(value) != 2:
+            return False
+        try:
+            return (all(not isinstance(item, bool) and isinstance(item, (int, float))
+                        and math.isfinite(float(item)) and item > 0 for item in value)
+                    and value[0] <= value[1])
+        except (OverflowError, ValueError):
+            return False
     cpu_rate = profile_data.get("cpu_ops_per_second")
     memory_rate = profile_data.get("memory_bytes_per_second")
     scaling_adjustments = []
@@ -372,7 +377,7 @@ def main() -> int:
         return 2
     for option_name, value in (("--clock-ghz", args.clock_ghz), ("--cores", args.cores),
                                ("--memory-gb", args.memory_gb), ("--memory-bandwidth-gbps", args.memory_bandwidth_gbps)):
-        if value is not None and value <= 0:
+        if value is not None and (not math.isfinite(value) or value <= 0):
             print(f"ERROR: {option_name} must be greater than zero.", file=sys.stderr)
             return 2
     profile = {"tier": args.profile, "auto_detected": False, "clock_ghz": args.clock_ghz, "cores": args.cores,
@@ -415,6 +420,9 @@ def main() -> int:
         protected_inputs.add(workload_path.resolve())
     if calibration_path:
         protected_inputs.add(calibration_path.resolve())
+    if log.resolve() in protected_inputs:
+        print("ERROR: analysis log path must not append into a source, workload, or calibration file.", file=sys.stderr)
+        return 2
     if json_output_path:
         if json_output_path in protected_inputs or json_output_path == log:
             print("ERROR: --json must not overwrite source, workload, calibration, or log files.", file=sys.stderr)
