@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -44,24 +45,56 @@ def run(argv: list[str], timeout: int = 30) -> subprocess.CompletedProcess[str]:
     return subprocess.run(argv, capture_output=True, text=True, timeout=timeout, check=False)
 
 
-def available_installers() -> list[str]:
-    managers = [name for name in INSTALLERS if shutil.which(name)]
-    # Termux uses pkg; do not mistake unrelated `pkg` commands for its package manager.
-    if not (os.environ.get("TERMUX_VERSION") and "/com.termux/" in os.environ.get("PREFIX", "")):
-        managers = [name for name in managers if name != "pkg"]
-    return managers
+ENVIRONMENTS = ("auto", "termux", "linux", "wsl", "macos", "windows")
 
 
-def resolve(task: str) -> dict[str, object]:
+def detect_environment() -> str:
+    """Detect the current execution environment, not a remote target."""
+    if os.environ.get("TERMUX_VERSION") and "/com.termux/" in os.environ.get("PREFIX", ""):
+        return "termux"
+    system = platform.system().lower()
+    if system == "windows":
+        return "windows"
+    if system == "darwin":
+        return "macos"
+    if system == "linux":
+        try:
+            version = Path("/proc/version").read_text(encoding="utf-8", errors="replace").lower()
+        except OSError:
+            version = ""
+        return "wsl" if "microsoft" in version or "wsl" in version else "linux"
+    return "linux"
+
+
+def effective_environment(requested: str) -> tuple[str, str]:
+    return (detect_environment(), "auto-detected") if requested == "auto" else (requested, "explicit")
+
+
+def available_installers(environment: str = "auto") -> list[str]:
+    current, _source = effective_environment(environment)
+    allowed = {
+        "termux": ("pkg",),
+        "linux": ("apt-get", "dnf", "pacman", "brew"),
+        "wsl": ("apt-get", "dnf", "pacman", "brew"),
+        "macos": ("brew",),
+        "windows": ("winget",),
+    }[current]
+    return [name for name in allowed if shutil.which(name)]
+
+
+def resolve(task: str, environment: str = "auto") -> dict[str, object]:
     spec = TASKS[task]
     found = [(name, shutil.which(name)) for name in spec["commands"] if shutil.which(name)]
+    current_environment, environment_source = effective_environment(environment)
     return {
         "task": task,
+        "environment": current_environment,
+        "environment_source": environment_source,
         "available_commands": [{"command": name, "path": path} for name, path in found],
         "selected_command": found[0][0] if found else None,
         "python_fallback": spec["fallback"],
         "fallback_available": True,
-        "installers": available_installers(),
+        "installers": available_installers(current_environment),
     }
 
 
@@ -141,10 +174,10 @@ def fallback(task: str, args: argparse.Namespace) -> int:
     return 2
 
 
-def try_install(command: str, timeout: int) -> int:
+def try_install(command: str, timeout: int, environment: str = "auto") -> int:
     is_root = getattr(os, "geteuid", lambda: -1)() == 0
     package_map = PACKAGES.get(command, {})
-    for manager in available_installers():
+    for manager in available_installers(environment):
         package = package_map.get(manager)
         if not package:
             continue
@@ -178,17 +211,21 @@ def try_install(command: str, timeout: int) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description="Resolve a task to an installed command or a task-specific Python fallback.",
+        epilog="Examples: agentkit_resolve.py json-check data.json; agentkit_resolve.py search src --pattern TODO --prefer-fallback",
+    )
     parser.add_argument("--version", action="version", version=VERSION)
-    parser.add_argument("task", choices=sorted(TASKS))
-    parser.add_argument("target", nargs="?", default=".", help="File, archive, or directory depending on task.")
-    parser.add_argument("--pattern", help="Search text or filename substring.")
-    parser.add_argument("--install", action="store_true", help="Explicitly permit one allowlisted package-install attempt.")
-    parser.add_argument("--timeout", type=int, default=120, choices=range(1, 601))
-    parser.add_argument("--prefer-fallback", action="store_true", help="Use the Python implementation even when a command exists.")
-    parser.add_argument("--json-report", action="store_true", help="Print resolution report and exit without running a task.")
+    parser.add_argument("task", choices=sorted(TASKS), help="Task to run.")
+    parser.add_argument("target", nargs="?", default=".", help="File, archive, or directory depending on task (default: current directory).")
+    parser.add_argument("--pattern", help="Search text or filename substring for search/find-files.")
+    parser.add_argument("--environment", choices=ENVIRONMENTS, default="auto", help="Execution environment for installer selection: auto-detect (default), termux, linux, wsl, macos, or windows. This does not emulate another OS.")
+    parser.add_argument("--install", action="store_true", help="Explicitly permit one allowlisted package-install attempt; no sudo and no automatic retry.")
+    parser.add_argument("--timeout", type=int, default=120, choices=range(1, 601), help="Per-command timeout in seconds (1..600).")
+    parser.add_argument("--prefer-fallback", action="store_true", help="Use the Python implementation even when an external command exists; output may differ.")
+    parser.add_argument("--json-report", action="store_true", help="Print the resolution report and exit without running a task.")
     args = parser.parse_args()
-    report = resolve(args.task)
+    report = resolve(args.task, args.environment)
     if args.json_report:
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
@@ -197,7 +234,7 @@ def main() -> int:
     # alternative (for example `find`) is already available. JSON-report remains read-only.
     preferred = TASKS[args.task]["commands"][0]
     if args.install and not args.prefer_fallback and not shutil.which(preferred):
-        install_status = try_install(preferred, args.timeout)
+        install_status = try_install(preferred, args.timeout, args.environment)
         if install_status == 0:
             report = resolve(args.task)
             selected = report["selected_command"]
@@ -219,6 +256,9 @@ def main() -> int:
             print(f"AVAILABLE: {selected} ({shutil.which(selected)})")
             print("This task needs additional arguments; provide --pattern where applicable or use --prefer-fallback.")
             return 2
+        preferred_for_task = TASKS[args.task]["commands"][0]
+        if selected != preferred_for_task:
+            print(f"注意、代替コマンドな為既存とは動作が異なります: {selected} (preferred: {preferred_for_task})", file=sys.stderr)
         print("RUN:", " ".join(command_args), flush=True)
         try:
             result = run(command_args, timeout=args.timeout)
@@ -230,7 +270,7 @@ def main() -> int:
         if result.stderr:
             print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr)
         return result.returncode
-    print("Using Python standard-library fallback.")
+    print("注意、代替コマンドな為既存とは動作が異なります: Python standard-library fallback", file=sys.stderr)
     return fallback(args.task, args)
 
 
