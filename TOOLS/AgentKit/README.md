@@ -86,3 +86,17 @@ Package installation is **off by default**. `--install` explicitly permits one b
 ### 6. Termux-derived tool candidates
 
 See [TERMUX_TOOL_CANDIDATES.md](TERMUX_TOOL_CANDIDATES.md) for the observed Termux command inventory summary and non-duplicating feature proposals. The resolver also supports 7-Zip for archive listing and Termux's `pkg` package manager when running in a detected Termux environment.
+
+### 7. Smartphone test profiles
+
+Build a default smartphone profile matrix and check Android minimum-SDK compatibility:
+
+```sh
+python3 TOOLS/AgentKit/mobile_test.py --root path/to/android-project
+python3 TOOLS/AgentKit/mobile_test.py --root path/to/android-project --profile low-end
+python3 TOOLS/AgentKit/mobile_test.py --root path/to/android-project --android-version 11 --json /tmp/mobile-test-plan.json
+```
+
+When `--profile` is omitted, all profiles are assigned automatically: low-end 4 GB / Android 11 (API 30), mid-end 8 GB / Android 15 (API 35), mid-high 12 GB / no default Android target, and high-end 16 GB / no default Android target. A known minSdk higher than the selected target API rejects that profile; an unknown minSdk blocks version-gated checks for review. See [MOBILE_TESTING.md](MOBILE_TESTING.md) for details.
+
+This is a static compatibility preflight and test-plan generator only. It does not launch an emulator, install an APK, or measure real-device performance.
