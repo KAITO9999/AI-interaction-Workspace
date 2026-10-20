@@ -264,6 +264,10 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
     target_runtime = calibration.get("target_runtime")
     if not isinstance(target_runtime, str) or not target_runtime.strip():
         return unavailable_estimate("Calibration is missing target_runtime metadata.", ["calibration target_runtime"])
+    def valid_range(value):
+        return (isinstance(value, list) and len(value) == 2
+                and all(not isinstance(item, bool) and isinstance(item, (int, float)) and item > 0 for item in value)
+                and value[0] <= value[1])
     cpu_rate = profile_data.get("cpu_ops_per_second")
     memory_rate = profile_data.get("memory_bytes_per_second")
     scaling_adjustments = []
@@ -288,10 +292,6 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
     api_rates = profile_data.get("api_latency_ms", {})
     if not isinstance(api_rates, dict):
         api_rates = {}
-    def valid_range(value):
-        return (isinstance(value, list) and len(value) == 2
-                and all(not isinstance(item, bool) and isinstance(item, (int, float)) and item > 0 for item in value)
-                and value[0] <= value[1])
     missing = []
     needs_cpu = any(op["kind"] == "cpu_ops" and op["count"] for op in workload["operations"])
     needs_memory = any(op["kind"] == "memory_bytes" and op["count"] for op in workload["operations"])
