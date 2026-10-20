@@ -111,3 +111,14 @@ Status: planned; application implementation has not started.
 - **Cross-model review:** allow a second, explicitly named model to review requirements, omissions, inconsistencies, security risks, and acceptance evidence. Treat its result as a review signal, not truth; require source/test evidence and human approval for consequential or uncertain changes.
 - **AI self-audit:** run a structured completeness/consistency check against the plan, dependencies, user constraints, and acceptance criteria. Report findings with evidence and severity; never silently alter user requirements or treat an AI-generated audit as proof.
 - **Complete when:** the catalog schema and update workflow exist; all model-related factual claims in Help/comparison views have sources; task records identify the model where known; unverified names/claims remain clearly marked; and model-review/self-audit tests cover false positives and missing evidence.
+
+
+## P13 — Integrate high-impact agent tools through the MCP/AgentKit workflow
+
+- **Outcome:** Executor++ can use tested tool adapters instead of relying only on model-generated reasoning.
+- **Initial tool set:** Playwright browser automation/UI testing; workspace-scoped shell/filesystem/patching; deterministic test/evaluation harness; optional independent model review.
+- **Source and design record:** [AgentKit researched capability tools](../../TOOLS/AgentKit/AGENT_CAPABILITY_TOOLS.md).
+- **Capability-aware routing:** probe the target environment first and select an installed, tested adapter; if unavailable, report the limitation and provide a documented fallback rather than pretending the tool ran.
+- **Evidence loop:** observe → act → verify → repair → record. Persist command/test results, screenshots/traces, changed paths, exact versions, model attribution, and acceptance evidence. Re-observe after interruption before resuming.
+- **Security:** tool definitions and external page/file content are untrusted; constrain browser destinations and filesystem roots, use bounded execution, require confirmation for consequential external/destructive actions, and enforce permissions in the execution layer.
+- **Complete when:** each adapter has a capability probe, bounded smoke test, tests for success/failure/timeout, evidence output, and documented limitations. No tool is marked available or tested without observed results.
