@@ -1,7 +1,7 @@
 # ReForge Visuals — cache
 
-Status: **3.24.5 candidate generated; static package/profile checks passed; in-world validation pending.**  
-Current candidate: `ReForge_Visuals-3.24.5.mcaddon`  
+Status: **3.24.6 candidate generated; targeted static checks passed; in-world validation pending.**  
+Current candidate: `ReForge_Visuals-3.24.6.mcaddon`  
 Last reviewed: 2026-10-21
 
 ## Historical 3.24.2 evidence (preserved for context)
@@ -79,3 +79,11 @@ Last reviewed: 2026-10-21
 - Static analysis cannot prove all runtime API behavior or that a reported in-world visual issue is fully resolved.
 
 See [PLAN.md](PLAN.md) for the remaining runtime validation.
+
+
+## 3.24.6 follow-up — restore non-VV 32 baseline
+
+- Change: non-VV default profile restored from 24 to 32 blocks in controller and default fog JSON. VV default stays 24; swamp remains 14; desert/mesa remain 28. Existing time-stage 32 variants reused.
+- Static checks: ZIP CRC, duplicate paths, 1,357 JSON parses, manifest 3.24.6, profile and JSON agreement passed.
+- Artifact SHA-256: 9985a0619b1c8a29cfe7c78bffddfd40e5fc7389809da8711179622ee6e14a90.
+- Runtime not tested.
