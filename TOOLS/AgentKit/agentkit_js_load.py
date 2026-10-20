@@ -1,0 +1,274 @@
+"""Static JavaScript workload review with explicit user-supplied target profiles.
+
+This tool never probes the host. It reports workload signals and does not invent wall-clock
+runtime values when execution counts or calibrated cost data are unavailable.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+VERSION = "0.1.0"
+JS_EXTENSIONS = {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"}
+SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "dist", "build", "target", ".next", ".agentkit-logs"}
+API_PATTERNS = [
+    (re.compile(r"\bfetch\s*\("), "fetch", "NETWORK", "Network request", "Network duration depends on server, connection, cache, and response size."),
+    (re.compile(r"\bXMLHttpRequest\b|\.send\s*\("), "xhr", "NETWORK", "XHR/send call", "Transport and event timing are runtime-dependent."),
+    (re.compile(r"\b(JSON\s*\.\s*parse|JSON\s*\.\s*stringify)\s*\("), "json", "CPU_MEMORY", "JSON serialization/parsing", "Cost depends heavily on payload size and object shape."),
+    (re.compile(r"\b(setInterval|setTimeout)\s*\("), "timer", "SCHEDULING", "Timer scheduling", "Timer callbacks may repeat; inspect interval, cancellation, and callback work."),
+    (re.compile(r"\b(requestAnimationFrame)\s*\("), "frame", "SCHEDULING", "Per-frame callback", "Work can repeat at display-frame frequency; inspect the callback body."),
+    (re.compile(r"\.(map|filter|reduce|sort|flatMap)\s*\("), "collection", "CPU", "Collection operation", "Work generally scales with collection size; sort is commonly O(n log n)."),
+    (re.compile(r"\b(new\s+(Array|Map|Set|Object|Uint8Array|Float32Array|ArrayBuffer))\b"), "allocation", "MEMORY", "Allocation candidate", "Memory and garbage-collection costs depend on allocation size and lifetime."),
+]
+LOOP_RE = re.compile(r"\b(for|while|do)\b")
+FUNCTION_RE = re.compile(r"\bfunction\s*([A-Za-z_$][\w$]*)?\s*\(|\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)")
+CALL_RE = re.compile(r"\b([A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*)\s*\(")
+
+def mask_js(source: str) -> str:
+    """Mask JS/TS comments and string/template literals while retaining offsets/newlines."""
+    chars = list(source)
+    i = 0
+    quote = None
+    escaped = False
+    block = False
+    line_comment = False
+    while i < len(chars):
+        ch = source[i]
+        nxt = source[i:i + 2]
+        if line_comment:
+            if ch == "\n":
+                line_comment = False
+            else:
+                chars[i] = " "
+            i += 1
+            continue
+        if block:
+            if nxt == "*/":
+                chars[i] = chars[i + 1] = " "
+                block = False
+                i += 2
+            else:
+                if ch != "\n":
+                    chars[i] = " "
+                i += 1
+            continue
+        if quote:
+            if ch != "\n":
+                chars[i] = " "
+            if escaped:
+                escaped = False
+            elif ch == "\\\\":
+                escaped = True
+            elif ch == quote:
+                quote = None
+            i += 1
+            continue
+        if nxt == "//":
+            chars[i] = chars[i + 1] = " "
+            line_comment = True
+            i += 2
+        elif nxt == "/*":
+            chars[i] = chars[i + 1] = " "
+            block = True
+            i += 2
+        elif ch in {"'", '"', "`"}:
+            chars[i] = " "
+            quote = ch
+            i += 1
+        else:
+            i += 1
+    return "".join(chars)
+
+def append_jsonl(path: Path, record: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+def find_js_files(root: Path, explicit: list[str]) -> list[Path]:
+    if explicit:
+        found = []
+        for item in explicit:
+            path = (root / item).resolve()
+            if not path.is_relative_to(root) or not path.is_file():
+                raise ValueError(f"--file must name an existing file under root: {item}")
+            if path.suffix.lower() not in JS_EXTENSIONS:
+                raise ValueError(f"unsupported JavaScript/TypeScript extension: {item}")
+            found.append(path)
+        return sorted(set(found))
+    return sorted(path for path in root.rglob("*")
+                  if path.is_file() and path.suffix.lower() in JS_EXTENSIONS
+                  and not any(part in SKIP_DIRS for part in path.relative_to(root).parts))
+
+def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
+    source = path.read_text(encoding="utf-8", errors="replace")
+    code = mask_js(source)
+    lines = code.splitlines()
+    findings = []
+    rel = str(path.relative_to(root))
+    loop_lines = [i for i, line in enumerate(lines, 1) if LOOP_RE.search(line)]
+    api_call_sites = []
+    for number, line in enumerate(lines, 1):
+        for pattern, api_name, category, title, detail in API_PATTERNS:
+            if pattern.search(line):
+                api_call_sites.append({"line": number, "api": api_name, "category": category})
+                findings.append({
+                    "path": rel, "line": number, "category": "API_LOAD" if category in {"NETWORK", "SCHEDULING"} else "WORKLOAD",
+                    "priority": "HIGH" if category == "NETWORK" and any(loop < number for loop in loop_lines) else "MEDIUM",
+                    "title": title, "detail": detail, "detection_confidence": "MEDIUM",
+                    "review_recommended": True,
+                    "evidence": "Call-site pattern only; runtime behavior and invocation frequency are not proven."
+                })
+    for line_no in loop_lines:
+        line = lines[line_no - 1]
+        end_line = line_no
+        depth = 0
+        started = False
+        for idx in range(line_no - 1, len(lines)):
+            depth += lines[idx].count("{") - lines[idx].count("}")
+            if "{" in lines[idx]:
+                started = True
+            if started and depth <= 0 and idx >= line_no - 1:
+                end_line = idx + 1
+                break
+            if not started and idx > line_no:
+                end_line = idx + 1
+                break
+        body = "\n".join(lines[line_no - 1:end_line])
+        contained = [api for api in api_call_sites if line_no <= api["line"] <= end_line]
+        nested = sum(1 for other in loop_lines if line_no < other <= end_line)
+        if contained:
+            findings.append({
+                "path": rel, "line": line_no, "category": "PERFORMANCE", "priority": "HIGH" if any(x["api"] in {"fetch", "xhr", "frame", "timer"} for x in contained) else "MEDIUM",
+                "title": "Call site inside loop",
+                "detail": f"Found {len(contained)} API/workload call site(s) in the loop body; iteration count is unknown."
+                         + (" Nested loop syntax is also present, so multiplicative work is possible." if nested else ""),
+                "detection_confidence": "MEDIUM", "review_recommended": True,
+                "evidence": "Static loop-body approximation; braces, callbacks, and control flow can affect the region."
+            })
+        if nested:
+            findings.append({
+                "path": rel, "line": line_no, "category": "PERFORMANCE", "priority": "MEDIUM",
+                "title": "Potential nested-loop cost",
+                "detail": "Another loop appears inside this loop's approximate body. Check whether the algorithm is O(n²) or has a smaller bounded inner range.",
+                "detection_confidence": "LOW", "review_recommended": True,
+                "evidence": "Heuristic nesting, not a parsed control-flow graph."
+            })
+    declared = []
+    for match in FUNCTION_RE.finditer(code):
+        name = match.group(1) or match.group(2)
+        if name:
+            declared.append(name)
+    for name in sorted(set(declared)):
+        uses = list(re.finditer(r"\b" + re.escape(name) + r"\b", code))
+        if len(uses) == 1:
+            line = code.count("\n", 0, uses[0].start()) + 1
+            findings.append({
+                "path": rel, "line": line, "category": "REACHABILITY", "priority": "LOW",
+                "title": "Function may have no direct references",
+                "detail": f"{name} has no other textual reference in this file. It may still be exported, registered indirectly, called by a framework, or invoked dynamically; confirm intended use before removal.",
+                "detection_confidence": "LOW", "review_recommended": True,
+                "evidence": "Textual reference check only; imports, exports, reflection, event registration, and cross-file callers are not resolved."
+            })
+    metric = {
+        "path": rel, "language": path.suffix.lower().lstrip("."), "bytes": path.stat().st_size,
+        "lines": len(source.splitlines()), "executable_lines_proxy": sum(1 for line in lines if line.strip()),
+        "loop_sites": loop_lines, "api_call_sites": api_call_sites,
+        "sha256": hashlib.sha256(source.encode()).hexdigest()
+    }
+    return findings, metric
+
+def load_calibration(path: Path | None) -> dict | None:
+    if path is None:
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"could not read calibration JSON: {exc}") from exc
+    if not isinstance(data, dict) or data.get("schema_version") != 1:
+        raise ValueError("calibration JSON must be an object with schema_version=1")
+    return data
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", default=".", help="Source root. Does not trigger host environment probing.")
+    parser.add_argument("--file", action="append", default=[], help="Relative JS/TS source file; repeatable.")
+    parser.add_argument("--profile", choices=["low", "mid", "mid-high", "high-end"], required=True,
+                        help="User-selected target tier; no device is detected automatically.")
+    parser.add_argument("--clock-ghz", type=float, help="Assumed target clock in GHz (user supplied).")
+    parser.add_argument("--cores", type=int, help="Assumed target CPU core count (user supplied).")
+    parser.add_argument("--memory-gb", type=float, help="Assumed target memory capacity in GB (user supplied).")
+    parser.add_argument("--memory-bandwidth-gbps", type=float, help="Assumed memory bandwidth in GB/s (user supplied).")
+    parser.add_argument("--calibration-json", help="Optional schema-v1 cost calibration; without it absolute runtime is not fabricated.")
+    parser.add_argument("--json", dest="json_path", help="Write a JSON report; relative paths resolve against --root.")
+    parser.add_argument("--log-dir", default=".agentkit-logs")
+    args = parser.parse_args()
+    root = Path(args.root).resolve()
+    if not root.is_dir():
+        print(f"ERROR: root is not a directory: {root}", file=sys.stderr)
+        return 2
+    profile = {"tier": args.profile, "auto_detected": False, "clock_ghz": args.clock_ghz, "cores": args.cores,
+               "memory_gb": args.memory_gb, "memory_bandwidth_gbps": args.memory_bandwidth_gbps,
+               "note": "All target specifications are user-supplied assumptions. Tier names alone do not determine execution speed."}
+    try:
+        files = find_js_files(root, args.file)
+        calibration_path = Path(args.calibration_json) if args.calibration_json else None
+        if calibration_path and not calibration_path.is_absolute():
+            calibration_path = root / calibration_path
+        calibration = load_calibration(calibration_path)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    findings, metrics = [], []
+    for path in files:
+        try:
+            found, metric = analyze_file(path, root)
+        except OSError as exc:
+            print(f"ERROR: cannot read {path}: {exc}", file=sys.stderr)
+            return 2
+        findings.extend(found)
+        metrics.append(metric)
+    # Runtime is intentionally unavailable unless calibrated coefficients and workload bounds exist.
+    # This avoids converting source-line counts or GHz into falsely precise milliseconds.
+    runtime_estimate = {"milliseconds": None, "range_ms": None, "confidence": "INSUFFICIENT_DATA",
+                        "reason": "Static source patterns and clock/memory specifications alone cannot establish call frequency, input sizes, engine behavior, or API latency.",
+                        "required_inputs": ["bounded input sizes / loop iteration counts", "target-runtime benchmark calibration", "API-specific latency/throughput ranges"]}
+    if calibration is not None:
+        runtime_estimate["calibration_loaded"] = True
+        runtime_estimate["calibration_profile"] = calibration.get("profile")
+        runtime_estimate["reason"] = "Calibration file was loaded, but this version does not yet compute a total runtime unless every workload dimension is modeled; no unsupported partial value is presented."
+    report = {"tool": "agentkit_js_load", "version": VERSION, "generated_utc": datetime.now(timezone.utc).isoformat(),
+              "root": str(root), "profile": profile, "files_scanned": len(metrics), "metrics": metrics,
+              "findings": sorted(findings, key=lambda x: (x["path"], x["line"], x["title"])),
+              "runtime_estimate": runtime_estimate,
+              "model_policy": ["No host environment discovery or automatic target inference.",
+                               "Tier names are labels, not hidden performance multipliers.",
+                               "A clock rate is not a reliable substitute for engine-specific throughput benchmarks.",
+                               "Static call-site findings do not prove dynamic call counts or dead code.",
+                               "Runtime estimate remains unavailable rather than inventing precision when required inputs are missing."]}
+    log_dir = Path(args.log_dir)
+    if not log_dir.is_absolute():
+        log_dir = root / log_dir
+    log = log_dir / "js-load-analysis.jsonl"
+    append_jsonl(log, {"timestamp_utc": report["generated_utc"], "tool": "agentkit_js_load",
+                       "profile": profile, "files_scanned": len(metrics), "findings_count": len(findings),
+                       "runtime_estimate": runtime_estimate})
+    report["log"] = str(log)
+    if args.json_path:
+        output = Path(args.json_path)
+        if not output.is_absolute():
+            output = root / output
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    for item in report["findings"]:
+        print(f"[{item['priority']}/{item['detection_confidence']}] {item['category']} {item['path']}:{item['line']} — {item['title']}: {item['detail']}")
+    print(f"Scanned {len(metrics)} JS/TS file(s); findings: {len(findings)}.")
+    print(f"Runtime estimate: unavailable without workload bounds and target-runtime calibration. Log: {log}")
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())
