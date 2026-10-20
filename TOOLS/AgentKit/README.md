@@ -100,3 +100,8 @@ python3 TOOLS/AgentKit/mobile_test.py --root path/to/android-project --android-v
 When `--profile` is omitted, all profiles are assigned automatically: low-end 4 GB / Android 11 (API 30), mid-end 8 GB / Android 15 (API 35), mid-high 12 GB / no default Android target, and high-end 16 GB / no default Android target. A known minSdk higher than the selected target API rejects that profile; an unknown minSdk blocks version-gated checks for review. See [MOBILE_TESTING.md](MOBILE_TESTING.md) for details.
 
 This is a static compatibility preflight and test-plan generator only. It does not launch an emulator, install an APK, or measure real-device performance.
+
+
+## Researched agent capability tools
+
+See [AGENT_CAPABILITY_TOOLS.md](AGENT_CAPABILITY_TOOLS.md) for the sourced priority list and planned integration of Playwright, sandboxed execution, deterministic evaluations, independent review, and MCP security checks. Research/design is recorded; runtime integrations are not yet claimed installed or tested.
