@@ -15,6 +15,13 @@ def run(*args, env=None, timeout=10):
 
 
 class AgentKitExtensionTests(unittest.TestCase):
+    def test_all_tools_expose_help(self):
+        self.assertEqual(run("--help").returncode, 0)
+        for command in ("commands", "compile-ts", "record-change", "audit-addon"):
+            result = run(command, "--help")
+            self.assertEqual(result.returncode, 0, command + ": " + result.stderr)
+            self.assertIn("usage:", result.stdout.lower())
+
     def test_command_inventory_lists_executable_without_running_it(self):
         with tempfile.TemporaryDirectory() as directory:
             cmd = Path(directory) / "demo-tool"

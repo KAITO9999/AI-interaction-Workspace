@@ -78,6 +78,59 @@ class ResolverTests(unittest.TestCase):
             self.assertEqual(report["task"], "json-check")
             self.assertTrue(report["fallback_available"])
             self.assertIn("python_fallback", report)
+            self.assertIn(report["environment"], {"termux", "linux", "wsl", "macos", "windows"})
+            self.assertEqual(report["environment_source"], "auto-detected")
+
+    def test_explicit_environment_is_reported_and_overrides_detection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            env = self.empty_path_env(Path(directory) / "empty")
+            result = run("json-check", ".", "--json-report", "--environment", "termux", env=env)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(result.stdout)
+            self.assertEqual(report["environment"], "termux")
+            self.assertEqual(report["environment_source"], "explicit")
+            self.assertEqual(report["installers"], [])
+
+    def test_fallback_execution_prints_compatibility_warning(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "valid.json"
+            target.write_text('{"ok":true}', encoding="utf-8")
+            result = run("json-check", str(target), "--prefer-fallback", env=self.empty_path_env(Path(directory) / "empty"))
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertIn("注意、代替コマンドな為既存とは動作が異なります", result.stderr)
+
+    def test_alternative_external_command_prints_compatibility_warning(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bins = root / "bin"
+            bins.mkdir()
+            target = root / "source.txt"
+            target.write_text("needle\n", encoding="utf-8")
+            grep = bins / "grep"
+            grep.write_text(f"#!{sys.executable}\nprint('alternative-command-ran')\n", encoding="utf-8")
+            grep.chmod(0o755)
+            result = run("search", str(root), "--pattern", "needle", env=self.empty_path_env(bins))
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertIn("alternative-command-ran", result.stdout)
+            self.assertIn("注意、代替コマンドな為既存とは動作が異なります", result.stderr)
+
+    def test_explicit_environment_mismatch_blocks_install(self):
+        with tempfile.TemporaryDirectory() as directory:
+            env = self.empty_path_env(Path(directory) / "empty")
+            probe = run("json-check", ".", "--json-report", env=env)
+            current = json.loads(probe.stdout)["environment"]
+            other = next(item for item in ("termux", "linux", "wsl", "macos", "windows") if item != current)
+            result = run("json-check", "missing.json", "--install", "--environment", other, env=env)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("Environment selection does not enable remote installation", result.stderr)
+            self.assertNotIn("INSTALL ATTEMPT", result.stdout)
+
+    def test_help_describes_environment_and_fallback(self):
+        result = run("--help")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("--environment", result.stdout)
+        self.assertIn("--prefer-fallback", result.stdout)
+        self.assertNotIn("注意、代替コマンドな為既存とは動作が異なります", result.stdout + result.stderr)
 
     def test_missing_install_mapping_does_not_run_without_opt_in(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -94,7 +147,7 @@ class ResolverTests(unittest.TestCase):
             bins = root / "bin"
             bins.mkdir()
             brew = bins / "brew"
-            brew.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" > \"$CAPTURE_INSTALL\"\nexit 1\n", encoding="utf-8")
+            brew.write_text("#!/bin/sh\nprintf '%s\n' \"$*\" > \"$CAPTURE_INSTALL\"\nexit 1\n", encoding="utf-8")
             brew.chmod(0o755)
             find = bins / "find"
             find.write_text("#!/bin/sh\necho fake-find-ran\nexit 0\n", encoding="utf-8")

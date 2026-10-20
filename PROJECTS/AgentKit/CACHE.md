@@ -1,6 +1,6 @@
 # AgentKit — cache
 
-Status: smartphone profile preflight implementation and CI validation passed; Android runtime validation pending.
+Status: smartphone profile preflight implementation and CI validation passed in merged PR #13; explicit environment/help follow-up is in PR #14 with CI pending; Android runtime validation pending.
 Last reviewed: 2026-10-21
 
 ## Verified source facts
@@ -9,6 +9,9 @@ Last reviewed: 2026-10-21
 - The prior source did not contain a smartphone hardware profile matrix with CPU-core, clock, GPU, or thermal parameters.
 - Smartphone memory budgets requested for this feature are 4 GB, 8 GB, 12 GB and 16 GB.
 - Android 11 maps to API 30 and Android 15 maps to API 35 for the configured compatibility gates.
+
+- The command resolver accepts an explicit environment policy (`auto`, `termux`, `linux`, `wsl`, `macos`, `windows`) for installer filtering. This is not OS emulation; package installation is blocked if an explicit environment conflicts with the current runtime.
+- Compatibility warnings are emitted only when a non-preferred external command or Python substitute actually executes, not in ordinary help output.
 
 ## Decisions
 

@@ -100,3 +100,25 @@ python3 TOOLS/AgentKit/mobile_test.py --root path/to/android-project --android-v
 When `--profile` is omitted, all profiles are assigned automatically: low-end 4 GB / Android 11 (API 30), mid-end 8 GB / Android 15 (API 35), mid-high 12 GB / no default Android target, and high-end 16 GB / no default Android target. A known minSdk higher than the selected target API rejects that profile; an unknown minSdk blocks version-gated checks for review. See [MOBILE_TESTING.md](MOBILE_TESTING.md) for details.
 
 This is a static compatibility preflight and test-plan generator only. It does not launch an emulator, install an APK, or measure real-device performance.
+
+
+### 8. Environment override and per-tool help
+
+Every CLI has argparse-generated `--help`; core and extension subcommands also expose their own help:
+
+```sh
+python3 TOOLS/AgentKit/agentkit.py --help
+python3 TOOLS/AgentKit/agentkit.py probe --help
+python3 TOOLS/AgentKit/agentkit_ext.py --help
+python3 TOOLS/AgentKit/agentkit_ext.py compile-ts --help
+python3 TOOLS/AgentKit/agentkit_resolve.py --help
+python3 TOOLS/AgentKit/mobile_test.py --help
+```
+
+The resolver normally auto-detects the current execution environment. Use `--environment termux|linux|wsl|macos|windows` to explicitly select the environment policy used to filter package managers, or `--environment auto` to return to detection. This is a local execution-context selector, not an emulator or remote environment switch; it does not make tools from another OS available. Package installation is blocked if an explicitly selected environment does not match the current runtime.
+
+When a task runs through a non-preferred external command (for example, `grep` instead of `rg`) or a Python substitute, stderr prints exactly:
+
+`注意、代替コマンドな為既存とは動作が異なります`
+
+The warning appears only when the alternate path is actually selected, not in the help output. AgentKit's own commands are documented normally and do not emit this compatibility warning merely for being custom tools.
