@@ -29,6 +29,16 @@ Last reviewed: 2026-10-21
 - Host-specific behavior such as injecting a queue during inference or directly ending a host connector must be gated by actual API support, with an explicit fallback if unsupported.
 - Public GitHub project records contain requirements and safe summaries only, not raw chat logs or secrets.
 
+## Initial research leads for checklist/help design
+
+These are initial research leads, not yet a complete systematic review. The help feature should revisit the sources, inspect methods/limitations, and distinguish source findings from product recommendations.
+
+- **HiAgent: Hierarchical Working Memory Management for Solving Long-Horizon Agent Tasks with Large Language Model** (ACL 2025): proposes subgoal-based memory chunks and selective replacement of old action-observation history; the paper reports improved results across five long-horizon tasks. Design implication: persist structured subgoals and retrieve only relevant evidence rather than repeatedly injecting the entire transcript. Source: https://aclanthology.org/2025.acl-long.1575/
+- **Can We Rely on LLM Agents to Draft Long-Horizon Plans? Let's Take TravelPlanner as an Example** (arXiv, 2024): reports failures to attend to important information in long/noisy contexts and limitations in plan refinement. Design implication: plans need explicit constraints, acceptance checks, and independent review rather than trusting a generated plan as complete. Source: https://arxiv.org/abs/2408.06318
+- **AMA-Bench: Evaluating Long-Horizon Memory for Agentic Applications** (PMLR/ICML 2026): evaluates memory over action-observation trajectories and reports weaknesses in systems that lose causal/objective information through lossy retrieval. Design implication: keep dependencies, causal links, state changes, and objective-linked evidence in addition to similarity-searchable notes. Source: https://proceedings.mlr.press/v306/zhao26bs.html
+- **The Effects of Test-Driven Development on External Quality and Productivity: A Meta-Analysis** (IEEE TSE, 2013): synthesizes 27 studies; reported effects vary by context, with a small positive average quality effect and little clear overall productivity effect. Design implication: make tests and observed results mandatory evidence for implementation claims, but do not promise that TDD universally increases speed. Source: https://doi.org/10.1109/TSE.2012.28
+- **ACM SIGSOFT Empirical Standards for Software Engineering**: offers method-specific checklists for evaluating research quality and validity. Design implication: the help content should include evidence quality, limitations, reproducibility, and validity checks rather than only a task list. Source: https://www2.sigsoft.org/EmpiricalStandards/
+
 ## Unknowns requiring evidence
 
 - Whether the target GPT host supports mid-inference queue injection, reliable asynchronous connector continuation, connector lifecycle control, and access to full input/output logs.
