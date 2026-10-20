@@ -127,6 +127,8 @@ class AgentKitAddonTests(unittest.TestCase):
             (root / "main.js").write_text("function run() { fetch('/data'); }\\n", encoding="utf-8")
             (root / "workload.json").write_text(json.dumps({
                 "schema_version": 1,
+                "scenario": "bounded regression scenario",
+                "assumptions": ["Counts are per one complete run."],
                 "operations": [
                     {"kind": "cpu_ops", "count": 1000},
                     {"kind": "memory_bytes", "count": 2000},
@@ -136,6 +138,10 @@ class AgentKitAddonTests(unittest.TestCase):
             (root / "calibration.json").write_text(json.dumps({
                 "schema_version": 1,
                 "target_runtime": "test runtime",
+                "evidence": {
+                    "measurement_method": "repeatable benchmark fixture",
+                    "source_urls": ["https://v8.dev/blog/real-world-performance"],
+                },
                 "profiles": {
                     "mid": {
                         "samples": 10,
@@ -164,11 +170,17 @@ class AgentKitAddonTests(unittest.TestCase):
             root = Path(directory)
             (root / "workload.json").write_text(json.dumps({
                 "schema_version": 1,
+                "scenario": "bounded regression scenario",
+                "assumptions": ["Counts are per one complete run."],
                 "operations": [{"kind": "cpu_ops", "count": 1000}],
             }), encoding="utf-8")
             (root / "calibration.json").write_text(json.dumps({
                 "schema_version": 1,
                 "target_runtime": "test runtime",
+                "evidence": {
+                    "measurement_method": "repeatable benchmark fixture",
+                    "source_urls": ["https://v8.dev/blog/real-world-performance"],
+                },
                 "profiles": {"mid": {
                     "samples": 3,
                     "cpu_ops_per_second": [1000, 2000],
@@ -186,6 +198,8 @@ class AgentKitAddonTests(unittest.TestCase):
 
             (root / "workload.json").write_text(json.dumps({
                 "schema_version": 1,
+                "scenario": "bounded regression scenario",
+                "assumptions": ["Counts are per one complete run."],
                 "operations": [{"kind": "cpu_ops", "count": 1000},
                                {"kind": "working_set_bytes", "count": 2_000_000_000}],
             }), encoding="utf-8")
