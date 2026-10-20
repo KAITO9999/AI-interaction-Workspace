@@ -1,11 +1,11 @@
 # ReForge Visuals — plan
 
-Status: candidate 3.24.5 static checks pass; in-world appearance and Content Log validation remain pending. Completed static evidence is recorded in [CACHE.md](CACHE.md).
+Status: candidate 3.24.6 static checks pass; in-world appearance and Content Log validation remain pending. Completed static evidence is recorded in [CACHE.md](CACHE.md).
 
-## P1 — Validate water/fog candidate 3.24.5 in-world
+## P1 — Validate water/fog candidate 3.24.6 in-world
 
 - **Outcome:** confirm water color, underwater visibility and distance behavior with VV on/off; keep water stylized and substantial rather than over-clear or muddy.
-- **Prerequisite:** import the exact ReForge_Visuals-3.24.5.mcaddon artifact and confirm the target Bedrock version/device.
+- **Prerequisite:** import the exact ReForge_Visuals-3.24.6.mcaddon artifact and confirm the target Bedrock version/device.
 - **Checks:**
   - Test both Vibrant Visuals/Deferred and Simple/non-VV modes.
   - Inspect standard water, swamp/mangrove, desert/mesa, jungle, river, ocean/deep ocean and a deep-water location.
