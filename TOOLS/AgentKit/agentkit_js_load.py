@@ -352,6 +352,7 @@ def main() -> int:
     parser.add_argument("--cores", type=int, help="Assumed target CPU core count (user supplied).")
     parser.add_argument("--memory-gb", type=float, help="Assumed target memory capacity in GB (user supplied).")
     parser.add_argument("--memory-bandwidth-gbps", type=float, help="Assumed memory bandwidth in GB/s (user supplied).")
+    parser.add_argument("--workload-template", help="Write a source-linked workload template that requires manual count/concurrency assumptions.")
     parser.add_argument("--workload-json", help="Explicit scenario JSON with operation counts and API concurrency assumptions.")
     parser.add_argument("--calibration-json", help="Measured schema-v1 cost ranges for the selected target profile.")
     parser.add_argument("--json", dest="json_path", help="Write a JSON report; relative paths resolve against --root.")
@@ -391,6 +392,35 @@ def main() -> int:
             return 2
         findings.extend(found)
         metrics.append(metric)
+    template_path = Path(args.workload_template) if args.workload_template else None
+    if template_path:
+        if not template_path.is_absolute():
+            template_path = root / template_path
+        template = {
+            "schema_version": 1,
+            "template_only": True,
+            "target_profile": profile,
+            "source_observations": [
+                {"path": item["path"], "loop_sites": item["loop_sites"], "api_call_sites": item["api_call_sites"]}
+                for item in metrics
+            ],
+            "operation_candidates": [
+                {"kind": "api", "name": api_name,
+                 "source_sites": [{"path": item["path"], "line": site["line"], "inside_loop_candidate": any(loop <= site["line"] for loop in item["loop_sites"])}
+                                  for item in metrics for site in item["api_call_sites"] if site["api"] == api_name],
+                 "count": None, "concurrency": None}
+                for api_name in sorted({site["api"] for item in metrics for site in item["api_call_sites"]})
+            ],
+            "required_user_inputs": [
+                "Replace null API count/concurrency values with measured or explicitly assumed per-run values.",
+                "Add CPU operation counts and memory traffic/working-set sizes for the same scenario when relevant.",
+                "Bound loop iteration counts and function invocation counts; source syntax alone cannot determine them.",
+                "Use measured calibration ranges for the selected target runtime/profile."
+            ],
+            "note": "This template is not valid estimator input until converted into a workload JSON with explicit operations and counts."
+        }
+        template_path.parent.mkdir(parents=True, exist_ok=True)
+        template_path.write_text(json.dumps(template, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
     runtime_estimate = estimate_runtime(args.profile, workload, calibration, profile)
     if calibration is not None:
         runtime_estimate["calibration_loaded"] = True
@@ -444,6 +474,8 @@ def main() -> int:
                        "findings_count": len(findings), "runtime_estimate": runtime_estimate,
                        "input_hashes": report["inputs"]})
     report["log"] = str(log)
+    if template_path:
+        report["workload_template"] = str(template_path)
     if args.json_path:
         output = Path(args.json_path)
         if not output.is_absolute():
@@ -457,6 +489,8 @@ def main() -> int:
         print("Runtime estimate: unavailable — " + runtime_estimate["reason"])
     else:
         print(f"Estimated runtime: {runtime_estimate['range_ms'][0]:.3f}–{runtime_estimate['range_ms'][1]:.3f} ms (midpoint {runtime_estimate['milliseconds']:.3f} ms; confidence={runtime_estimate['confidence']}).")
+    if template_path:
+        print(f"Workload template: {template_path}")
     print(f"Analysis log: {log}")
     return 0
 
