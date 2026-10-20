@@ -116,7 +116,9 @@ def find_js_files(root: Path, explicit: list[str]) -> list[Path]:
         for filename in filenames:
             path = Path(current) / filename
             if path.suffix.lower() in JS_EXTENSIONS:
-                found.append(path.resolve())
+                resolved = path.resolve()
+                if resolved.is_relative_to(root):
+                    found.append(resolved)
     return sorted(found)
 
 def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
