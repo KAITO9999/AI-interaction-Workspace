@@ -219,7 +219,7 @@ def main() -> int:
     if args.json_path:
         output = Path(args.json_path)
         if not output.is_absolute():
-            output = Path.cwd() / output
+            output = root / output
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     for item in findings:
