@@ -116,7 +116,7 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
     for number, line in enumerate(lines, 1):
         for pattern, api_name, category, title, detail in API_PATTERNS:
             for match in pattern.finditer(line):
-                awaited = bool(re.search(r"\\bawait\\s+$", line[:match.start()]))
+                awaited = bool(re.search(r"\bawait\s+$", line[:match.start()]))
                 api_call_sites.append({"line": number, "api": api_name, "category": category, "awaited": awaited})
                 findings.append({
                     "path": rel, "line": number, "category": "API_LOAD" if category in {"NETWORK", "SCHEDULING"} else "WORKLOAD",
@@ -126,7 +126,7 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
                     "evidence": "Call-site pattern only; runtime behavior and invocation frequency are not proven."
                 })
                 if api_name == "timer":
-                    delay = re.search(r"\\bsetInterval\\s*\\([^,]+,\\s*(\\d+(?:\\.\\d+)?)", line)
+                    delay = re.search(r"\bsetInterval\s*\([^,]+,\s*(\d+(?:\.\d+)?)", line)
                     if delay and float(delay.group(1)) < 100:
                         findings.append({
                             "path": rel, "line": number, "category": "PERFORMANCE", "priority": "MEDIUM",
@@ -185,13 +185,13 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
         if name:
             declared.append(name)
     for name in sorted(set(declared)):
-        exported = (re.search(r"\\bexport\\s+(?:default\\s+)?(?:async\\s+)?function\\s+" + re.escape(name) + r"\\b", code)
-                    or re.search(r"\\bexport\\s+(?:const|let|var)\\s+" + re.escape(name) + r"\\b", code))
+        exported = (re.search(r"\bexport\s+(?:default\s+)?(?:async\s+)?function\s+" + re.escape(name) + r"\b", code)
+                    or re.search(r"\bexport\s+(?:const|let|var)\s+" + re.escape(name) + r"\b", code))
         if exported:
             continue
-        uses = list(re.finditer(r"\\b" + re.escape(name) + r"\\b", code))
+        uses = list(re.finditer(r"\b" + re.escape(name) + r"\b", code))
         if len(uses) == 1:
-            line = code.count("\\n", 0, uses[0].start()) + 1
+            line = code.count("\n", 0, uses[0].start()) + 1
             findings.append({
                 "path": rel, "line": line, "category": "REACHABILITY", "priority": "LOW",
                 "title": "Function may have no direct references",
