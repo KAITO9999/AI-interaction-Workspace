@@ -106,6 +106,11 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertTrue(template["template_only"])
             self.assertIsNone(template["operation_candidates"][0]["count"])
             self.assertTrue(template["operation_candidates"][0]["source_sites"])
+            original_source = (root / "main.js").read_text(encoding="utf-8")
+            overwrite = run(JSLOAD, "--root", str(root), "--profile", "mid", "--workload-template", "main.js")
+            self.assertEqual(overwrite.returncode, 2)
+            self.assertIn("must not overwrite", overwrite.stderr)
+            self.assertEqual((root / "main.js").read_text(encoding="utf-8"), original_source)
 
     def test_js_load_uses_explicit_workload_and_profile_calibration(self):
         with tempfile.TemporaryDirectory() as directory:
