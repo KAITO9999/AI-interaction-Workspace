@@ -11,6 +11,7 @@
 | [DOCS/PROJECT_WORKFLOW.md](PROJECT_WORKFLOW.md) | Starting/resuming a project | Four-file format, task transitions and AI/person handoff |
 | [PROJECTS/README.md](../PROJECTS/README.md) | Project-specific work | Project record index and reread policy |
 | [PROJECTS/ExecutorPlus/WORK_MODELS.md](../PROJECTS/ExecutorPlus/WORK_MODELS.md) | Executor++ task only | Long-work, checklist, termination and research work models |
+| [PROJECTS/ExecutorPlus/MODEL_CATALOG.md](../PROJECTS/ExecutorPlus/MODEL_CATALOG.md) | Executor++ model claims/comparisons | Extensible model profiles; factual claims require dated sources |
 | [PROJECTS/ExecutorPlus/PLAN.md](../PROJECTS/ExecutorPlus/PLAN.md) | Executor++ planning | Pending architecture, implementation and validation |
 | [PROJECTS/ExecutorPlus/CACHE.md](../PROJECTS/ExecutorPlus/CACHE.md) | Executor++ fact/decision lookup | Requirements, decisions, verified facts and unknowns |
 | [PROJECTS/ExecutorPlus/IN_PROGRESS.md](../PROJECTS/ExecutorPlus/IN_PROGRESS.md) | Executor++ active work/handoff | Current investigation and next action |
