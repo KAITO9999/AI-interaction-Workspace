@@ -73,7 +73,7 @@ class EventLogger:
             return False
         try:
             with self.path.open("a", encoding="utf-8") as stream:
-                stream.write(json.dumps(record, ensure_ascii=False, default=str) + "\\n")
+                stream.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
                 stream.flush()
             return True
         except OSError as exc:
