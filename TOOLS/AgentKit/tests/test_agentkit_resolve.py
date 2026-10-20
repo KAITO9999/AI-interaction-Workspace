@@ -99,6 +99,21 @@ class ResolverTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             self.assertIn("注意、代替コマンドな為既存とは動作が異なります", result.stderr)
 
+    def test_alternative_external_command_prints_compatibility_warning(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bins = root / "bin"
+            bins.mkdir()
+            target = root / "source.txt"
+            target.write_text("needle\\n", encoding="utf-8")
+            grep = bins / "grep"
+            grep.write_text(f"#!{sys.executable}\\nprint('alternative-command-ran')\\n", encoding="utf-8")
+            grep.chmod(0o755)
+            result = run("search", str(root), "--pattern", "needle", env=self.empty_path_env(bins))
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertIn("alternative-command-ran", result.stdout)
+            self.assertIn("注意、代替コマンドな為既存とは動作が異なります", result.stderr)
+
     def test_help_describes_environment_and_fallback(self):
         result = run("--help")
         self.assertEqual(result.returncode, 0)
