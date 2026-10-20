@@ -30,6 +30,7 @@
 - [ ] Test compile-ts against representative real tsconfig.json projects.
 - [ ] Decide whether the core probe should call the extension CLI directly or remain intentionally small.
 - [x] Add smartphone resource profiles (4/8/12/16 GB) and Android minSdk preflight with automatic profile assignment.
+- [ ] Add explicit environment selection alongside auto-detection; provide per-tool help and runtime-only warnings for alternate/fallback execution.
 - [ ] Validate the profile gate on a real Android emulator or physical device; static preflight is not runtime evidence.
 
 ## ReForge Visuals
