@@ -163,11 +163,26 @@ Execution-time and processing-volume observations are integrated into the same a
 
     python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --list
     python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --quick
-    python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --skip integration
+    python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --skip-file tests/test_integration.py\n    python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project --skip-test-id package.tests.test_core.CoreTests.test_edge_case
     python3 TOOLS/AgentKit/agentkit_testfast.py --root path/to/project
 
 The runner probes host metadata before estimating: OS, architecture, Python version, CPU count, available memory metadata, and Minecraft add-on/package/manifest signals. Runtime estimates are produced only from prior successful/recorded runs with matching environment and identical test selection; without calibration data it explicitly says the estimate is unavailable. Estimates use the median of matching history, with confidence based on sample count. Minecraft-like projects always downgrade estimates and print a warning because game engine/version, script APIs, target device, and in-game state may not match the host environment. Inspect the actual target environment before trusting timing estimates.
 
-Quick mode selects tests whose IDs contain `smoke`, `fast`, `sanity`, or `critical`; explicit `--skip` filters test IDs by substring. Every skipped test is written to `.agentkit-logs/test-skips.jsonl`; run durations and environment fingerprints are written to `.agentkit-logs/test-runtime.jsonl`. A zero-test selection is an error, not success. Quick/skip runs are partial verification and must not replace a full test run before release or merge.
+Quick mode selects tests whose IDs contain `smoke`, `fast`, `sanity`, or `critical`. Explicit exclusions use exact file paths (`--skip-file tests/test_integration.py`) or exact unittest IDs (`--skip-test-id package.tests.test_core.CoreTests.test_edge_case`), not substring matching. File exclusions apply to tests defined in that file; a typo or unknown test ID is an error. Every skipped test is written to `.agentkit-logs/test-skips.jsonl`; measured run durations are written to `.agentkit-logs/test-runtime.jsonl`. A zero-test selection is an error, not success. Quick/skip runs are partial verification and must not replace a full test run before release or merge.
 
-The first run on a new environment has no calibrated estimate by design. Matching OS/Python/CPU metadata still cannot fully account for virtualization, load, power limits, external services, Minecraft runtime behavior, or other environment-specific variables.
+The test runner's environment metadata and measured history are operational diagnostics only; they are not the new source-code workload prediction model. The JS workload analyzer below deliberately does not inspect the host.
+
+
+### 12. JavaScript workload and API-load analysis (explicit target profile)
+
+    python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --profile low
+    python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --profile mid --clock-ghz 3.2 --cores 8 --memory-gb 8
+    python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --file src/main.js --profile high-end --json js-load.json
+
+The profile is supplied by the user: low, mid, mid-high, or high-end. Optional clock/core/memory figures are assumptions supplied on the command line. This tool never reads the host's CPU, RAM, OS, or clock to infer a target device.
+
+The initial analyzer flags likely API-heavy call sites, timer/frame callbacks, collection operations, allocations, calls inside approximate loop bodies, possible nested loops, and functions with no direct textual references. Findings include confidence and review guidance. A missing direct reference is **not** proof of dead code: exports, cross-file imports, callbacks, reflection, framework registration, and dynamic calls can all make code reachable.
+
+**It deliberately does not produce fabricated milliseconds yet.** Static syntax alone does not reveal runtime input sizes, actual iteration counts, engine/JIT behavior, API latency, cache/network state, or concurrent overlap. Without workload bounds and target-runtime calibration, runtime_estimate.milliseconds remains null. Clock GHz alone is not a reliable conversion factor for JavaScript throughput. This foundation reports evidence and required inputs rather than pretending a source-line count is a benchmark.
+
+For design rationale, see the V8 team's [real-world performance methodology](https://v8.dev/blog/real-world-performance), [JavaScript execution costs](https://v8.dev/blog/cost-of-javascript-2019), and [benchmark limitations](https://v8.dev/blog/retiring-octane). Those sources emphasize representative workload measurement and show why a single synthetic benchmark or clock rate is not a universal runtime predictor. The follow-on estimator should accumulate bounded operation counts and API-specific cost ranges, with each coefficient traceable to a target-runtime benchmark or published evidence.
