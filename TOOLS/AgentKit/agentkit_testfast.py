@@ -2,6 +2,7 @@
 from __future__ import annotations
 import argparse
 import hashlib
+import inspect
 import json
 import os
 import platform
@@ -86,7 +87,8 @@ def main() -> int:
     parser.add_argument("--root", default=".", help="Project/test discovery root.")
     parser.add_argument("--pattern", default="test*.py")
     parser.add_argument("--quick", action="store_true", help="Run only tests whose IDs contain smoke, fast, sanity, or critical.")
-    parser.add_argument("--skip", action="append", default=[], help="Explicit test-ID substring to skip; repeatable and logged.")
+    parser.add_argument("--skip-file", action="append", default=[], help="Skip tests defined in this exact file path; repeatable.")
+    parser.add_argument("--skip-test-id", action="append", default=[], help="Skip this exact unittest ID; repeatable.")
     parser.add_argument("--log-dir", default=LOG_DIR_DEFAULT)
     parser.add_argument("--list", action="store_true", help="List discovered tests without running.")
     args = parser.parse_args()
@@ -114,8 +116,36 @@ def main() -> int:
         included = [test for test in tests if any(token in (test.id() + " " + getattr(test, "_testMethodName", "")).lower() for token in quick_tokens)]
     else:
         included = list(tests)
+    test_ids = {test.id() for test in tests}
+    unknown_ids = sorted(set(args.skip_test_id) - test_ids)
+    if unknown_ids:
+        print("ERROR: unknown exact test ID(s): " + ", ".join(unknown_ids), file=sys.stderr)
+        return 2
+    skip_files = set()
+    for value in args.skip_file:
+        candidate = Path(value)
+        candidate = (candidate if candidate.is_absolute() else root / candidate).resolve()
+        if not candidate.is_relative_to(root) or not candidate.is_file():
+            print(f"ERROR: --skip-file must name an existing file under test root: {value}", file=sys.stderr)
+            return 2
+        skip_files.add(candidate)
+    def test_source_file(test):
+        try:
+            source = inspect.getsourcefile(test.__class__)
+            return Path(source).resolve() if source else None
+        except (OSError, TypeError):
+            return None
+    explicitly_skipped = []
+    skip_reasons = {}
+    for test in included:
+        source_file = test_source_file(test)
+        if test.id() in args.skip_test_id:
+            explicitly_skipped.append(test)
+            skip_reasons[test.id()] = "exact test ID explicitly skipped"
+        elif source_file in skip_files:
+            explicitly_skipped.append(test)
+            skip_reasons[test.id()] = "test source file explicitly skipped"
     skipped_by_mode = [test for test in tests if test not in included]
-    explicitly_skipped = [test for test in included if any(value.lower() in (test.id() + " " + getattr(test, "_testMethodName", "")).lower() for value in args.skip)]
     skipped = skipped_by_mode + explicitly_skipped
     selected = [test for test in included if test not in explicitly_skipped]
     if not selected:
@@ -152,9 +182,11 @@ def main() -> int:
         print(f"Estimated runtime: {estimate:.2f}s from {len(matching)} matching prior run(s); confidence={confidence}.")
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     for test in skipped:
+        reason = "quick mode excluded test" if test in skipped_by_mode else skip_reasons.get(test.id(), "explicitly skipped")
         append_jsonl(skip_log, {"timestamp_utc": datetime.now(timezone.utc).isoformat(), "run_id": run_id,
-            "test_id": test.id(), "reason": "quick mode excluded test" if test in skipped_by_mode else "explicit --skip substring",
-            "quick_mode": args.quick, "selection_signature": selection_signature, "environment_fingerprint": profile["fingerprint"]})
+            "test_id": test.id(), "source_file": str(test_source_file(test)) if test_source_file(test) else None,
+            "reason": reason, "quick_mode": args.quick, "selection_signature": selection_signature,
+            "environment_fingerprint": profile["fingerprint"]})
     start = time.perf_counter()
     result = unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(selected))
     elapsed = time.perf_counter() - start
@@ -168,7 +200,7 @@ def main() -> int:
     append_jsonl(runtime_log, record)
     print(f"Measured runtime: {elapsed:.3f}s. Runtime log: {runtime_log}")
     print(f"Skipped-test log: {skip_log}")
-    if args.quick or args.skip:
+    if args.quick or args.skip_file or args.skip_test_id:
         print("WARNING: partial test selection used. Run without --quick/--skip before release or merge.")
     return 0 if result.wasSuccessful() else 1
 
