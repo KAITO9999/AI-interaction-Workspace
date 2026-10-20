@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Local payload bridge: extract selected JSON/text/file payloads without printing whole documents. Not an MCP client."""
-import argparse,json,sys,hashlib
+import argparse,json,sys,hashlib,mimetypes
 from pathlib import Path
 def pointer(v,p):
  if p in ("","/"):return v
@@ -14,14 +14,14 @@ def pointer(v,p):
  return v
 def main():
  p=argparse.ArgumentParser(description=__doc__);s=p.add_subparsers(dest="action",required=True)
- x=s.add_parser("extract-json");x.add_argument("source");x.add_argument("pointer");x.add_argument("--output",required=True)
- c=s.add_parser("copy-file");c.add_argument("source");c.add_argument("--output",required=True)
- t=s.add_parser("slice-text");t.add_argument("source");t.add_argument("--start-marker",required=True);t.add_argument("--end-marker",required=True);t.add_argument("--output",required=True)
- h=s.add_parser("hash");h.add_argument("source")
+ x=s.add_parser("extract-json");x.add_argument("source");x.add_argument("pointer");x.add_argument("--output",required=True);x.add_argument("--flow",choices=["mcp-to-gpt","gpt-to-mcp","mcp-via-gpt-to-mcp"],default="mcp-to-gpt")
+ c=s.add_parser("copy-file");c.add_argument("source");c.add_argument("--output",required=True);c.add_argument("--flow",choices=["mcp-to-gpt","gpt-to-mcp","mcp-via-gpt-to-mcp"],default="mcp-to-gpt")
+ t=s.add_parser("slice-text");t.add_argument("source");t.add_argument("--start-marker",required=True);t.add_argument("--end-marker",required=True);t.add_argument("--output",required=True);t.add_argument("--flow",choices=["mcp-to-gpt","gpt-to-mcp","mcp-via-gpt-to-mcp"],default="mcp-to-gpt")
+ h=s.add_parser("hash");h.add_argument("source");h.add_argument("--flow",choices=["mcp-to-gpt","gpt-to-mcp","mcp-via-gpt-to-mcp"],default="mcp-to-gpt")
  a=p.parse_args();src=Path(a.source)
  try:
   if not src.is_file():raise ValueError(f"source not found: {src}")
-  if a.action=="hash":print(json.dumps({"bytes":src.stat().st_size,"sha256":hashlib.sha256(src.read_bytes()).hexdigest()}));return 0
+  if a.action=="hash":print(json.dumps({"flow":a.flow,"bytes":src.stat().st_size,"sha256":hashlib.sha256(src.read_bytes()).hexdigest(),"media_type":mimetypes.guess_type(src.name)[0] or "application/octet-stream"}));return 0
   out=Path(a.output);out.parent.mkdir(parents=True,exist_ok=True)
   if src.resolve()==out.resolve():raise ValueError("output must not overwrite source")
   if a.action=="copy-file":out.write_bytes(src.read_bytes())
@@ -32,6 +32,6 @@ def main():
    i+=len(a.start_marker);j=data.find(a.end_marker,i)
    if j<0:raise ValueError("end marker not found")
    out.write_text(data[i:j],encoding="utf-8")
-  print(json.dumps({"status":"written","output":str(out),"bytes":out.stat().st_size},ensure_ascii=False));return 0
+  print(json.dumps({"status":"written","flow":a.flow,"source":str(src),"output":str(out),"bytes":out.stat().st_size,"sha256":hashlib.sha256(out.read_bytes()).hexdigest(),"media_type":mimetypes.guess_type(out.name)[0] or "application/octet-stream","note":"Flow is provenance metadata only; use an authorized connector action to transfer this file to/from MCP."},ensure_ascii=False));return 0
  except (OSError,ValueError,json.JSONDecodeError) as e:print(f"ERROR: {e}",file=sys.stderr);return 2
 if __name__=="__main__":raise SystemExit(main())
