@@ -93,6 +93,74 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertEqual(unknown.returncode, 2)
             self.assertIn("unknown exact test ID", unknown.stderr)
 
+    def test_js_load_all_profiles_are_written_without_host_detection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "main.js").write_text("export function tick() { return 1; }\\n", encoding="utf-8")
+            result = run(JSLOAD, "--root", str(root), "--json-dir", "profiles")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            for tier in ("low", "mid", "mid-high", "high-end"):
+                report_path = root / "profiles" / f"{tier}.json"
+                self.assertTrue(report_path.is_file(), tier)
+                report = json.loads(report_path.read_text(encoding="utf-8"))
+                self.assertEqual(report["profile"]["tier"], tier)
+                self.assertFalse(report["profile"]["auto_detected"])
+            self.assertIn("4 profile", result.stdout)
+
+    def test_multilang_audit_and_minimum_api_policy(self):
+        script = ROOT / "agentkit_lang_audit.py"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "native.cpp").write_text("int main() { while(true) {} }\\n", encoding="utf-8")
+            (root / "app.kt").write_text("fun draw() { Thread.sleep(1000) }\\n", encoding="utf-8")
+            (root / "AndroidManifest.xml").write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-sdk android:minSdkVersion="30"/><uses-feature android:glEsVersion="0x00030000" android:required="true"/></manifest>', encoding="utf-8")
+            result = run(script, "--root", str(root), "--json", "lang.json")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            report = json.loads((root / "lang.json").read_text(encoding="utf-8"))
+            self.assertIn("cpp", report["languages_detected"])
+            self.assertIn("kotlin", report["languages_detected"])
+            self.assertEqual(report["android_min_sdk"], 30)
+            self.assertEqual(report["opengl_es_minimum"], "3.0")
+            self.assertIn("heuristic", report["limitations"])
+
+    def test_virtual_edit_overlay_preserves_original_until_apply(self):
+        script = ROOT / "agentkit_virtual_edit.py"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            original = root / "sample.py"
+            original.write_text("value = 1\\n", encoding="utf-8")
+            stage = run(script, "--root", str(root), "stage", "sample.py", "--replace", "value = 1", "--with", "value = 2")
+            self.assertEqual(stage.returncode, 0, stage.stderr + stage.stdout)
+            self.assertEqual(original.read_text(encoding="utf-8"), "value = 1\\n")
+            inspect = run(script, "--root", str(root), "show", "sample.py")
+            self.assertEqual(inspect.returncode, 0, inspect.stderr + inspect.stdout)
+            self.assertIn("value = 2", inspect.stdout)
+            self.assertIn("10", inspect.stdout)
+
+    def test_mcp_bridge_extracts_json_pointer_without_printing_whole_document(self):
+        script = ROOT / "agentkit_mcp_bridge.py"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "large.json"
+            source.write_text(json.dumps({"large": "secret-like payload", "selected": {"text": "only this"}}), encoding="utf-8")
+            output = root / "selected.json"
+            result = run(script, "extract-json", str(source), "/selected", "--output", str(output))
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertEqual(json.loads(output.read_text(encoding="utf-8")), {"text": "only this"})
+            self.assertNotIn("secret-like payload", result.stdout)
+
+    def test_bundle_tool_creates_downloadable_zip_without_network_access(self):
+        script = ROOT / "agentkit_bundle.py"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "agentkit-tool.py").write_text("print('ok')\\n", encoding="utf-8")
+            output = root / "bundle.zip"
+            result = run(script, "--root", str(root), "--output", str(output), "--include", "agentkit-tool.py")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertTrue(zipfile.is_zipfile(output))
+            with zipfile.ZipFile(output) as archive:
+                self.assertIn("agentkit-tool.py", archive.namelist())
+
     def test_js_load_model_is_explicit_and_does_not_probe_host(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
