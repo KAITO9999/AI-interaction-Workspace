@@ -119,7 +119,7 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
                 api_call_sites.append({"line": number, "api": api_name, "category": category})
                 findings.append({
                     "path": rel, "line": number, "category": "API_LOAD" if category in {"NETWORK", "SCHEDULING"} else "WORKLOAD",
-                    "priority": "HIGH" if category == "NETWORK" and any(loop < number for loop in loop_lines) else "MEDIUM",
+                    "priority": "MEDIUM",
                     "title": title, "detail": detail, "detection_confidence": "MEDIUM",
                     "review_recommended": True,
                     "evidence": "Call-site pattern only; runtime behavior and invocation frequency are not proven."
@@ -207,8 +207,8 @@ def load_workload(path: Path | None) -> dict | None:
         if not isinstance(operation, dict) or operation.get("kind") not in {"cpu_ops", "memory_bytes", "api"}:
             raise ValueError(f"workload operation {index} must have kind cpu_ops, memory_bytes, or api")
         count = operation.get("count")
-        if isinstance(count, bool) or not isinstance(count, (int, float)) or count < 0:
-            raise ValueError(f"workload operation {index} count must be a non-negative number")
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            raise ValueError(f"workload operation {index} count must be a non-negative integer")
         if operation["kind"] == "api":
             if not isinstance(operation.get("name"), str) or not operation["name"]:
                 raise ValueError(f"workload API operation {index} requires a non-empty name")
@@ -231,7 +231,10 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
         if calibration is None:
             missing.append("measured target-runtime calibration JSON for the selected profile")
         return unavailable_estimate("No total runtime is calculated without both an explicit workload scenario and target-runtime calibration.", missing)
-    profile_data = calibration.get("profiles", {}).get(profile_name)
+    profiles = calibration.get("profiles")
+    if not isinstance(profiles, dict):
+        return unavailable_estimate("Calibration is missing a profiles object.", ["calibration profiles object"])
+    profile_data = profiles.get(profile_name)
     if not isinstance(profile_data, dict):
         return unavailable_estimate(f"Calibration has no profile named {profile_name}.", [f"profiles.{profile_name} in calibration JSON"])
     target_runtime = calibration.get("target_runtime")
@@ -240,6 +243,8 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
     cpu_rate = profile_data.get("cpu_ops_per_second")
     memory_rate = profile_data.get("memory_bytes_per_second")
     api_rates = profile_data.get("api_latency_ms", {})
+    if not isinstance(api_rates, dict):
+        api_rates = {}
     def valid_range(value):
         return (isinstance(value, list) and len(value) == 2
                 and all(not isinstance(item, bool) and isinstance(item, (int, float)) and item > 0 for item in value)
