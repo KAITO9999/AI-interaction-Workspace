@@ -130,6 +130,7 @@ class ResolverTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("--environment", result.stdout)
         self.assertIn("--prefer-fallback", result.stdout)
+        self.assertNotIn("注意、代替コマンドな為既存とは動作が異なります", result.stdout + result.stderr)
 
     def test_missing_install_mapping_does_not_run_without_opt_in(self):
         with tempfile.TemporaryDirectory() as directory:
