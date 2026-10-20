@@ -28,7 +28,15 @@ jobs:
       - name: Smoke-test read-only audit tools
         run: |
           python TOOLS/AgentKit/agentkit_code_audit.py TOOLS/AgentKit --json "$RUNNER_TEMP/agentkit-code-audit.json" --log-dir "$RUNNER_TEMP/agentkit-audit-logs"
-          python TOOLS/AgentKit/agentkit_js_load.py --root . --profile mid --workload-template "$RUNNER_TEMP/agentkit-js-workload-template.json" --json "$RUNNER_TEMP/agentkit-js-load.json" --log-dir "$RUNNER_TEMP/agentkit-js-load-logs"
+          cat > "$RUNNER_TEMP/sample.js" <<'JS'
+          async function poll(items) {
+            for (const item of items) {
+              await fetch(item.url);
+            }
+          }
+          export function start(items) { return poll(items); }
+          JS
+          python TOOLS/AgentKit/agentkit_js_load.py --root "$RUNNER_TEMP" --file sample.js --profile mid --workload-template "$RUNNER_TEMP/agentkit-js-workload-template.json" --json "$RUNNER_TEMP/agentkit-js-load.json" --log-dir "$RUNNER_TEMP/agentkit-js-load-logs"
       - name: Validate pull-request change provenance
         run: python scripts/check_change_ledger.py
       - name: Check local Markdown links
