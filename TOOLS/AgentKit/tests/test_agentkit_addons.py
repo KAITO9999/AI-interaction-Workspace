@@ -165,7 +165,8 @@ class AgentKitAddonTests(unittest.TestCase):
 
             (root / "workload.json").write_text(json.dumps({
                 "schema_version": 1,
-                "operations": [{"kind": "working_set_bytes", "count": 2_000_000_000}],
+                "operations": [{"kind": "cpu_ops", "count": 1000},
+                               {"kind": "working_set_bytes", "count": 2_000_000_000}],
             }), encoding="utf-8")
             result = run(JSLOAD, "--root", str(root), "--profile", "mid", "--memory-gb", "1",
                          "--workload-json", "workload.json", "--calibration-json", "calibration.json",
