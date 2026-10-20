@@ -4,6 +4,8 @@ Status: **3.24.5 candidate generated; static package/profile checks passed; in-w
 Current candidate: `ReForge_Visuals-3.24.5.mcaddon`  
 Last reviewed: 2026-10-21
 
+## Historical 3.24.2 evidence (preserved for context)
+
 ## Verified facts
 
 - BP and RP header/module versions and their internal dependency versions are 3.24.2 in the generated candidate.
@@ -38,7 +40,7 @@ Last reviewed: 2026-10-21
 - Runtime remains unknown: no Bedrock render, Content Log, target-device, multiplayer or performance test. No global hurt-tint patch was made because the global vanilla override would be broad and compatibility-prone.
 - Audit report ReForge_Visuals-3.24.5-audit.txt is a local handoff artifact; not hosted in this repository.
 
-## Water tint decision
+## Historical 3.24.2 — water tint decision
 
 - `RP/subpacks/*/water/water.json`: `biome_water_color_contribution` 0.04 → 0.20.
 - `RP/subpacks/*/water/river_water.json`: 0.05 → 0.12.
@@ -46,14 +48,14 @@ Last reviewed: 2026-10-21
 - `RP/biomes_client.json` legacy colors are synchronized with 71 current per-biome definitions, while legacy fog directives and water transparency remain unchanged.
 - The stronger mix is a supported tuning choice, not a promise of an exact rendered appearance. Validate it in-world before declaring the visual issue completely closed.
 
-## Other verified corrections
+## Historical 3.24.2 — other verified corrections
 
 - Added `minecraft:swampland` to `BP/scripts/biome_cache_engine.js` water-biome classification.
 - Corrected all four `sampleWidth=1.25` values in `medium_shadow_24/water/*.json` to 1.0 and matched the pack's subpack label.
 - Prevented `fog_controller.js` from emitting per-altitude weather-fog IDs in Y ≤ 30, where standalone resources do not exist; cleared the high-altitude snow transition latch when switching into that band. Underground fog remains authoritative.
 - The original archive's 1,172 unchanged members are byte-identical; 20 existing members changed and only root `CHANGELOG.md` was added. No original archive member was removed.
 
-## Static verification results
+## Historical 3.24.2 — static verification results
 
 - Release archive CRC: PASS; unsafe paths: 0.
 - BP/RP manifest consistency: PASS; both report 3.24.2.
@@ -68,7 +70,7 @@ Last reviewed: 2026-10-21
 - Full static audit issue count: 0.
 - Audit report: `ReForge_Visuals-3.24.2-audit.txt` was generated for the local handoff; it is not a repository-hosted artifact.
 
-## UNKNOWN — not yet verified
+## Historical 3.24.2 — UNKNOWN at that time
 
 - Water appearance in a real Bedrock world with Vibrant Visuals both enabled and disabled.
 - Add-on loading and Content Log output on the target Bedrock build/device.
