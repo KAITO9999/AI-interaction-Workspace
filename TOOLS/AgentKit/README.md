@@ -102,6 +102,24 @@ When `--profile` is omitted, all profiles are assigned automatically: low-end 4 
 This is a static compatibility preflight and test-plan generator only. It does not launch an emulator, install an APK, or measure real-device performance.
 
 
+## Capability tool inventory
+
+Run a discovery-only report (does not execute discovered tools):
+
+```sh
+python3 TOOLS/AgentKit/agentkit_capabilities.py
+python3 TOOLS/AgentKit/agentkit_capabilities.py --format json --output /tmp/agent-capabilities.json
+```
+
+Optional bounded version probes use fixed `--version` arguments only for allowlisted tools already found on PATH. They never invoke `npx` or install packages:
+
+```sh
+python3 TOOLS/AgentKit/agentkit_capabilities.py --probe-versions
+python3 TOOLS/AgentKit/agentkit_capabilities.py --probe-versions --timeout 1.5 --format json
+```
+
+Discovery does not prove a tool works or that browser binaries/MCP configuration exist. Review the report and run a task-specific smoke test before relying on any tool.
+
 ## Researched agent capability tools
 
 See [AGENT_CAPABILITY_TOOLS.md](AGENT_CAPABILITY_TOOLS.md) for the sourced priority list and planned integration of Playwright, sandboxed execution, deterministic evaluations, independent review, and MCP security checks. Research/design is recorded; runtime integrations are not yet claimed installed or tested.
