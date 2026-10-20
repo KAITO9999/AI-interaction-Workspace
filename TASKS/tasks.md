@@ -46,36 +46,22 @@
 
 ## AgentKit
 
-- [x] Add initial safe capability inventory for known high-impact tool CLIs; discovery does not execute commands or install packages.
+- [x] Build an initial safe capability inventory for known high-impact tool CLIs without executing commands or installing packages.
 - [x] Add fixed-argument, bounded version probes for discovered allowlisted tools and JSON/Markdown reports with source URLs.
 - [x] Add unit tests for no-execution discovery, fixed argv, timeout handling, bounded output and report provenance.
-- [ ] Expand discovery to verify browser binaries, MCP configuration and more language-specific test runners.
+- [x] Review primary research on tool use, program execution, test-time search, retrieval, reflection and multi-agent coordination; record experimental findings and limitations.
+- [x] Catalog open-source/local candidates and distinguish local/self-hosted use from API-backed fees and quotas.
+- [ ] Expand discovery to verify browser binaries, MCP configuration, local model runtimes/endpoints and more language-specific test runners without exposing secrets.
+- [ ] Collect an approved hardware/runtime profile and compare local inference paths (Ollama vs llama.cpp; vLLM only where appropriate) without automatic installation.
 - [ ] Add a Playwright adapter for approved browser exploration, screenshots/traces and repeatable UI regression tests; keep consequential actions approval-gated.
-- [ ] Add workspace-scoped execution/patch adapter with path containment, command policy, timeout/output limits, postcondition checks and provenance records.
+- [ ] Add a workspace-scoped execution/patch adapter with path containment, command policy, timeout/output limits, postcondition checks and provenance records.
 - [ ] Add a deterministic evaluation/result schema mapping acceptance criteria to test IDs, expected/actual results, artifacts and limitations.
-- [ ] Add optional separately named model-review routing with scoped context packets and evidence-based finding verification.
+- [ ] Add a bounded adaptive repair/search loop that escalates only after objective failure and selects candidates using tests/validators.
+- [ ] Add versioned local checkpoint/memory records and resume/re-observation behavior for interrupted tasks.
+- [ ] Evaluate local exact search/repository maps first; add a local vector/RAG index only if retrieval recall tests show a material gap.
+- [ ] Add optional separately named reviewer routing for independent work or a genuinely distinct second model; findings remain advisory and evidence-checked.
 - [ ] Add security/fault-injection tests for prompt injection, path traversal, unknown tools, output flooding, timeouts, interrupted operations and uncertain external side effects.
-- [x] Add initial safe capability inventory for known high-impact tool CLIs; discovery does not execute commands or install packages.
-- [x] Add fixed-argument, bounded version probes for discovered allowlisted tools and JSON/Markdown reports with source URLs.
-- [x] Add unit tests for no-execution discovery, fixed argv, timeout handling, bounded output and report provenance.
-- [ ] Expand discovery to verify browser binaries, MCP configuration and more language-specific test runners.
-- [ ] Add a Playwright adapter for approved browser exploration, screenshots/traces and repeatable UI regression tests; keep consequential actions approval-gated.
-- [ ] Add workspace-scoped execution/patch adapter with path containment, command policy, timeout/output limits, postcondition checks and provenance records.
-- [ ] Add a deterministic evaluation/result schema mapping acceptance criteria to test IDs, expected/actual results, artifacts and limitations.
-- [ ] Add optional separately named model-review routing with scoped context packets and evidence-based finding verification.
-- [ ] Add security/fault-injection tests for prompt injection, path traversal, unknown tools, output flooding, timeouts, interrupted operations and uncertain external side effects.
-- [x] Core environment probe and reduced POSIX shell fallback.
-- [x] Inventory actual external executables in PATH without executing discovered tools.
-- [x] Wrap installed tsc for TypeScript build and no-emit check.
-- [x] Add static mcaddon/mcpack validation.
-- [x] Add path-level change records with actor (AI/human) and mode (online/offline/mixed).
-- [x] Add tests for extension CLI and provenance validation.
-- [x] Add CI gate for append-only ledger and changed-path coverage.
-- [ ] Smoke-test on Termux and another target environment.
-- [ ] Test compile-ts against representative real tsconfig.json projects.
-- [ ] Decide whether the core probe should call the extension CLI directly or remain intentionally small.
-- [x] Add smartphone resource profiles (4/8/12/16 GB) and Android minSdk preflight with automatic profile assignment.
-- [ ] Validate the profile gate on a real Android emulator or physical device; static preflight is not runtime evidence.
+- [ ] Compare baseline and candidate toolchains on fixed tasks using the same model/context/compute budget where practical; report pass rate, latency, call count, failure class and environment evidence.
 
 ## ReForge Visuals
 
