@@ -1,8 +1,17 @@
-"""Probe the agent's own execution environment and recommend capability fallbacks.
+"""Diagnose the agent execution environment and recommend capability fallbacks.
 
-This module describes the runtime where it is executed (not a remote user's
+AgentKit combines existing tools and standard-library fallbacks so bounded
+verification can continue in restricted agent environments when a preferred
+tool is missing. It records failures instead of silently discarding them, and
+never claims a fallback is equivalent to the original tool. It does not bypass
+OS/agent policy or elevate privileges.
+
+This module is the read-only environment diagnostic, not the practical task
+runner. It describes the runtime where it is executed (not a remote user's
 machine or a hosted AI product). Active probes are local, temporary, bounded,
-and opt-in. It never installs packages or contacts the network.
+and opt-in. It never installs packages or contacts the network. For observing a
+specific child command and writing timestamped process/output logs, use
+agentkit_observe.py; that runner is intentionally separate.
 """
 from __future__ import annotations
 
