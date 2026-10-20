@@ -115,8 +115,9 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
     api_call_sites = []
     for number, line in enumerate(lines, 1):
         for pattern, api_name, category, title, detail in API_PATTERNS:
-            if pattern.search(line):
-                api_call_sites.append({"line": number, "api": api_name, "category": category})
+            for match in pattern.finditer(line):
+                awaited = bool(re.search(r"\\bawait\\s+$", line[:match.start()]))
+                api_call_sites.append({"line": number, "api": api_name, "category": category, "awaited": awaited})
                 findings.append({
                     "path": rel, "line": number, "category": "API_LOAD" if category in {"NETWORK", "SCHEDULING"} else "WORKLOAD",
                     "priority": "MEDIUM",
@@ -124,6 +125,16 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
                     "review_recommended": True,
                     "evidence": "Call-site pattern only; runtime behavior and invocation frequency are not proven."
                 })
+                if api_name == "timer":
+                    delay = re.search(r"\\bsetInterval\\s*\\([^,]+,\\s*(\\d+(?:\\.\\d+)?)", line)
+                    if delay and float(delay.group(1)) < 100:
+                        findings.append({
+                            "path": rel, "line": number, "category": "PERFORMANCE", "priority": "MEDIUM",
+                            "title": "Potential high-frequency interval",
+                            "detail": f"setInterval delay is {delay.group(1)} ms; callbacks may run at 10 Hz or faster. Confirm that this cadence is needed and that work is bounded.",
+                            "detection_confidence": "MEDIUM", "review_recommended": True,
+                            "evidence": "Literal delay only; browser throttling and callback execution affect actual frequency."
+                        })
     for line_no in loop_lines:
         line = lines[line_no - 1]
         end_line = line_no
@@ -151,6 +162,15 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
                 "detection_confidence": "MEDIUM", "review_recommended": True,
                 "evidence": "Static loop-body approximation; braces, callbacks, and control flow can affect the region."
             })
+            awaited_network = [item for item in contained if item.get("awaited") and item["api"] in {"fetch", "xhr"}]
+            if awaited_network:
+                findings.append({
+                    "path": rel, "line": line_no, "category": "API_LOAD", "priority": "HIGH",
+                    "title": "Sequential awaited network call in loop",
+                    "detail": "A network-related call appears to be awaited inside a loop. If each iteration depends on the previous response, round-trip latency can accumulate; consider batching or bounded concurrency only if semantics allow.",
+                    "detection_confidence": "MEDIUM", "review_recommended": True,
+                    "evidence": "Approximate loop region and await syntax; runtime call path and data dependencies are not proven."
+                })
         if nested:
             findings.append({
                 "path": rel, "line": line_no, "category": "PERFORMANCE", "priority": "MEDIUM",
@@ -165,9 +185,13 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
         if name:
             declared.append(name)
     for name in sorted(set(declared)):
-        uses = list(re.finditer(r"\b" + re.escape(name) + r"\b", code))
+        exported = (re.search(r"\\bexport\\s+(?:default\\s+)?(?:async\\s+)?function\\s+" + re.escape(name) + r"\\b", code)
+                    or re.search(r"\\bexport\\s+(?:const|let|var)\\s+" + re.escape(name) + r"\\b", code))
+        if exported:
+            continue
+        uses = list(re.finditer(r"\\b" + re.escape(name) + r"\\b", code))
         if len(uses) == 1:
-            line = code.count("\n", 0, uses[0].start()) + 1
+            line = code.count("\\n", 0, uses[0].start()) + 1
             findings.append({
                 "path": rel, "line": line, "category": "REACHABILITY", "priority": "LOW",
                 "title": "Function may have no direct references",
