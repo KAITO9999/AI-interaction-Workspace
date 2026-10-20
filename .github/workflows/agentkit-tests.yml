@@ -59,8 +59,10 @@ jobs:
             --include TOOLS/AgentKit/agentkit_bundle.py \
             --include TOOLS/AgentKit/agentkit_route_probe.py \
             --include TOOLS/AgentKit/agentkit_toolplan.py \
-            --include TOOLS/AgentKit/agentkit_env.py \
-            --include TOOLS/AgentKit/agentkit_observe.py \
+            --include TOOLS/AgentKit/agentkit.py \
+            --include TOOLS/AgentKit/agentkit_ext.py \
+            --include TOOLS/AgentKit/agentkit_resolve.py \
+            --include TOOLS/AgentKit/agentkit_zipset.py \
             --include TOOLS/AgentKit/agentkit_virtual_tools.json \
             --include TOOLS/AgentKit/policies/01-runtime-profiles.md \
             --include TOOLS/AgentKit/policies/02-language-platform-policy.md \
