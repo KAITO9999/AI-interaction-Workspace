@@ -1,5 +1,11 @@
 # AI Agent Usage Contract
 
+## Environment boundary
+
+When this document or a task says **AI-side Linux environment**, it means the Linux execution environment available to the AI agent—not the user's Android/Termux shell or another remote machine. Run AgentKit commands in that AI-side environment when the task is about the agent's own available tools or filesystem. AgentKit itself runs wherever invoked, so identify the environment, working directory, and target root explicitly.
+
+A Termux command inventory or test is evidence only for the Termux environment in which it was collected. It must not be used to infer which commands, files, permissions, or capabilities exist in the AI-side Linux environment. Re-run the relevant probe in the target environment before relying on it.
+
 For every new task and every resumption after context loss, reread [the canonical AI workflow](../../AI_WORKFLOW.md), current workspace state and task list. Use the [prompt routing index](../../PROMPTS/README.md) and [project workflow](../../DOCS/PROJECT_WORKFLOW.md) to choose the smallest relevant instruction set. Do not load unrelated project caches or duplicate procedures.
 
 Before implementing a substitute tool:
