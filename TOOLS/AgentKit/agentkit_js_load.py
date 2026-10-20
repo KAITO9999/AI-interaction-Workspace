@@ -8,8 +8,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import math
+import os
 import json
 import re
+from collections import Counter
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -108,9 +110,14 @@ def find_js_files(root: Path, explicit: list[str]) -> list[Path]:
                 raise ValueError(f"unsupported JavaScript/TypeScript extension: {item}")
             found.append(path)
         return sorted(set(found))
-    return sorted(path for path in root.rglob("*")
-                  if path.is_file() and path.suffix.lower() in JS_EXTENSIONS
-                  and not any(part in SKIP_DIRS for part in path.relative_to(root).parts))
+    found = []
+    for current, directories, filenames in os.walk(root):
+        directories[:] = sorted(name for name in directories if name not in SKIP_DIRS)
+        for filename in filenames:
+            path = Path(current) / filename
+            if path.suffix.lower() in JS_EXTENSIONS:
+                found.append(path.resolve())
+    return sorted(found)
 
 def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
     source = path.read_text(encoding="utf-8", errors="replace")
@@ -189,10 +196,11 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
         name = match.group(1) or match.group(2)
         if name:
             declared.append(name)
+    identifier_counts = Counter(re.findall(r"\b[A-Za-z_$][\w$]*\b", code))
     for name in sorted(set(declared)):
         exported = (re.search(r"\bexport\s+(?:default\s+)?(?:async\s+)?function\s+" + re.escape(name) + r"\b", code)
                     or re.search(r"\bexport\s+(?:const|let|var)\s+" + re.escape(name) + r"\b", code))
-        if exported:
+        if exported or identifier_counts[name] != 1:
             continue
         uses = list(re.finditer(r"\b" + re.escape(name) + r"\b", code))
         if len(uses) == 1:
