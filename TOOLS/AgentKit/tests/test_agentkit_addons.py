@@ -86,7 +86,7 @@ class AgentKitAddonTests(unittest.TestCase):
                 "    await fetch('/api/data');\n"
                 "  }\n"
                 "}\n"
-                "export function publicEntry() {}\n"
+                "export function publicEntry() { tick([]); }\n"
                 "function maybeUnused() {}\n",
                 encoding="utf-8",
             )
