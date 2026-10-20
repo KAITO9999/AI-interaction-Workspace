@@ -19,6 +19,8 @@
 
 ## AgentKit
 
+Detailed sequencing, dependencies, acceptance criteria and the completed gap review live in the canonical [AgentKit plan](../PROJECTS/AgentKit/PLAN.md). Keep this global list as a short index rather than duplicating the project plan.
+
 - [x] Core environment probe and reduced POSIX shell fallback.
 - [x] Inventory actual external executables in PATH without executing discovered tools.
 - [x] Wrap installed tsc for TypeScript build and no-emit check.
@@ -26,8 +28,13 @@
 - [x] Add path-level change records with actor (AI/human) and mode (online/offline/mixed).
 - [x] Add tests for extension CLI and provenance validation.
 - [x] Add CI gate for append-only ledger and changed-path coverage.
+- [ ] Reconcile open AgentKit PRs #10 and #11 against the current default branch and CI before relying on their changes.
+- [ ] Fix audit false positives for commented-out code, with regression tests.
+- [ ] Add file-path and exact test-entry-point selection instead of substring-only skipping.
 - [ ] Smoke-test on Termux and another target environment.
 - [ ] Test compile-ts against representative real tsconfig.json projects.
+- [ ] Test actual connector-backed MCP/GPT directions; the local payload bridge alone is not end-to-end integration.
+- [ ] Test virtual edit conflict/stale-hash rejection and source preservation before explicit apply.
 - [ ] Decide whether the core probe should call the extension CLI directly or remain intentionally small.
 
 ## ReForge Visuals
