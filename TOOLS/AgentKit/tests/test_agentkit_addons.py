@@ -120,7 +120,9 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertIn("cpp", report["languages_detected"])
             self.assertIn("kotlin", report["languages_detected"])
             self.assertEqual(report["android_min_sdk"], 30)
-            self.assertEqual(report["opengl_es_minimum"], "3.0")\n            self.assertIn("arm64-v8a/AArch64", report["abis_detected"])\n            self.assertTrue(any(item["category"] == "VULKAN_BASELINE" for item in report["findings"]))
+            self.assertEqual(report["opengl_es_minimum"], "3.0")
+            self.assertIn("arm64-v8a/AArch64", report["abis_detected"])
+            self.assertTrue(any(item["category"] == "VULKAN_BASELINE" for item in report["findings"]))
             self.assertTrue(any("heuristic" in item for item in report["limitations"]))
 
     def test_virtual_edit_overlay_preserves_original_until_apply(self):
