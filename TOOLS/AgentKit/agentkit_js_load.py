@@ -392,13 +392,32 @@ def main() -> int:
             return 2
         findings.extend(found)
         metrics.append(metric)
+    json_output_path = Path(args.json_path) if args.json_path else None
+    if json_output_path:
+        if not json_output_path.is_absolute():
+            json_output_path = root / json_output_path
+        json_output_path = json_output_path.resolve()
+    log_dir = Path(args.log_dir)
+    if not log_dir.is_absolute():
+        log_dir = root / log_dir
+    log_dir = log_dir.resolve()
+    log = log_dir / "js-load-analysis.jsonl"
+    protected_inputs = {path.resolve() for path in files}
+    if workload_path:
+        protected_inputs.add(workload_path.resolve())
+    if calibration_path:
+        protected_inputs.add(calibration_path.resolve())
+    if json_output_path:
+        if json_output_path in protected_inputs or json_output_path == log:
+            print("ERROR: --json must not overwrite source, workload, calibration, or log files.", file=sys.stderr)
+            return 2
     template_path = Path(args.workload_template) if args.workload_template else None
     if template_path:
         if not template_path.is_absolute():
             template_path = root / template_path
         template_path = template_path.resolve()
-        if template_path in {workload_path.resolve() if workload_path else None, calibration_path.resolve() if calibration_path else None}:
-            print("ERROR: --workload-template must not overwrite a workload or calibration input file.", file=sys.stderr)
+        if template_path in protected_inputs or template_path == log or template_path == json_output_path:
+            print("ERROR: --workload-template must not overwrite source, workload, calibration, report, or log files.", file=sys.stderr)
             return 2
         template = {
             "schema_version": 1,
@@ -470,10 +489,6 @@ def main() -> int:
                                "Clock scaling is a linear assumption only when explicitly enabled; it may not hold across CPU architectures or JS engines.",
                                "Static call-site findings do not prove dynamic call counts or dead code.",
                                "Runtime estimate remains unavailable rather than inventing precision when workload bounds or calibrated rates are missing."]}
-    log_dir = Path(args.log_dir)
-    if not log_dir.is_absolute():
-        log_dir = root / log_dir
-    log = log_dir / "js-load-analysis.jsonl"
     for item in report["findings"]:
         append_jsonl(log, {"timestamp_utc": report["generated_utc"], "record_type": "finding",
                            "profile": profile, **item})
@@ -484,12 +499,13 @@ def main() -> int:
     report["log"] = str(log)
     if template_path:
         report["workload_template"] = str(template_path)
-    if args.json_path:
-        output = Path(args.json_path)
-        if not output.is_absolute():
-            output = root / output
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if json_output_path:
+        try:
+            json_output_path.parent.mkdir(parents=True, exist_ok=True)
+            json_output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        except OSError as exc:
+            print(f"ERROR: could not write JSON report: {exc}", file=sys.stderr)
+            return 2
     for item in report["findings"]:
         print(f"[{item['priority']}/{item['detection_confidence']}] {item['category']} {item['path']}:{item['line']} — {item['title']}: {item['detail']}")
     print(f"Scanned {len(metrics)} JS/TS file(s); findings: {len(findings)}.")
