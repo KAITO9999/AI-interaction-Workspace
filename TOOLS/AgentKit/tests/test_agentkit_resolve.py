@@ -105,9 +105,9 @@ class ResolverTests(unittest.TestCase):
             bins = root / "bin"
             bins.mkdir()
             target = root / "source.txt"
-            target.write_text("needle\\n", encoding="utf-8")
+            target.write_text("needle\n", encoding="utf-8")
             grep = bins / "grep"
-            grep.write_text(f"#!{sys.executable}\\nprint('alternative-command-ran')\\n", encoding="utf-8")
+            grep.write_text(f"#!{sys.executable}\nprint('alternative-command-ran')\n", encoding="utf-8")
             grep.chmod(0o755)
             result = run("search", str(root), "--pattern", "needle", env=self.empty_path_env(bins))
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
@@ -147,7 +147,7 @@ class ResolverTests(unittest.TestCase):
             bins = root / "bin"
             bins.mkdir()
             brew = bins / "brew"
-            brew.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" > \"$CAPTURE_INSTALL\"\nexit 1\n", encoding="utf-8")
+            brew.write_text("#!/bin/sh\nprintf '%s\n' \"$*\" > \"$CAPTURE_INSTALL\"\nexit 1\n", encoding="utf-8")
             brew.chmod(0o755)
             find = bins / "find"
             find.write_text("#!/bin/sh\necho fake-find-ran\nexit 0\n", encoding="utf-8")
