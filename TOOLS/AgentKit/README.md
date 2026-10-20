@@ -178,12 +178,44 @@ The test runner's environment metadata and measured history are operational diag
 
     python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --profile low
     python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --profile mid --clock-ghz 3.2 --cores 8 --memory-gb 8
-    python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --file src/main.js --profile high-end --json js-load.json
+    python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --file src/main.js --profile high-end --json js-load.json\n    python3 TOOLS/AgentKit/agentkit_js_load.py --root path/to/project --profile mid --workload-json workload.json --calibration-json calibration.json
 
 The profile is supplied by the user: low, mid, mid-high, or high-end. Optional clock/core/memory figures are assumptions supplied on the command line. This tool never reads the host's CPU, RAM, OS, or clock to infer a target device.
 
 The initial analyzer flags likely API-heavy call sites, timer/frame callbacks, collection operations, allocations, calls inside approximate loop bodies, possible nested loops, and functions with no direct textual references. Findings include confidence and review guidance. A missing direct reference is **not** proof of dead code: exports, cross-file imports, callbacks, reflection, framework registration, and dynamic calls can all make code reachable.
 
-**It deliberately does not produce fabricated milliseconds yet.** Static syntax alone does not reveal runtime input sizes, actual iteration counts, engine/JIT behavior, API latency, cache/network state, or concurrent overlap. Without workload bounds and target-runtime calibration, runtime_estimate.milliseconds remains null. Clock GHz alone is not a reliable conversion factor for JavaScript throughput. This foundation reports evidence and required inputs rather than pretending a source-line count is a benchmark.
+**Absolute time is calculated only from an explicit workload scenario and measured calibration.** Static syntax alone cannot establish runtime input sizes, iteration counts, engine/JIT behavior, API latency, cache/network state, or concurrent overlap. Without both files below, the estimate remains unavailable; clock GHz alone is not converted into JavaScript throughput.
+
+Workload file (the counts must come from a documented scenario or measured execution, not guesses hidden in the tool):
+
+```json
+{
+  "schema_version": 1,
+  "operations": [
+    {"kind": "cpu_ops", "count": 1000000},
+    {"kind": "memory_bytes", "count": 1048576},
+    {"kind": "api", "name": "fetch", "count": 4, "concurrency": 1}
+  ]
+}
+```
+
+Calibration file example (rates and latency ranges must be measured on the selected target runtime/profile; the values here are illustrative only and must not be copied as authoritative benchmarks):
+
+```json
+{
+  "schema_version": 1,
+  "target_runtime": "name and version of the measured JS runtime",
+  "profiles": {
+    "mid": {
+      "samples": 10,
+      "cpu_ops_per_second": [1000000, 2000000],
+      "memory_bytes_per_second": [10000000, 20000000],
+      "api_latency_ms": {"fetch": [20, 250]}
+    }
+  }
+}
+```
+
+The estimator sums the calibrated CPU, memory-transfer, and API components. API count is divided into batches using the explicit concurrency value. The total is a serial-component estimate; it does not model arbitrary overlap between CPU work and network waits. The confidence label reflects the number of calibration samples supplied, not independent verification of their quality. Static source findings and workload JSON are separate evidence: the analyzer does not silently infer loop counts, input sizes, or function invocation counts from source text.
 
 For design rationale, see the V8 team's [real-world performance methodology](https://v8.dev/blog/real-world-performance), [JavaScript execution costs](https://v8.dev/blog/cost-of-javascript-2019), and [benchmark limitations](https://v8.dev/blog/retiring-octane). Those sources emphasize representative workload measurement and show why a single synthetic benchmark or clock rate is not a universal runtime predictor. The follow-on estimator should accumulate bounded operation counts and API-specific cost ranges, with each coefficient traceable to a target-runtime benchmark or published evidence.
