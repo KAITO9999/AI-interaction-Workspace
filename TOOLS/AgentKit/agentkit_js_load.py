@@ -410,7 +410,7 @@ def main() -> int:
             ],
             "operation_candidates": [
                 {"kind": "api", "name": api_name,
-                 "source_sites": [{"path": item["path"], "line": site["line"], "inside_loop_candidate": any(loop <= site["line"] for loop in item["loop_sites"])}
+                 "source_sites": [{"path": item["path"], "line": site["line"], "loop_sites_in_file": item["loop_sites"]}
                                   for item in metrics for site in item["api_call_sites"] if site["api"] == api_name],
                  "count": None, "concurrency": None}
                 for api_name in sorted({site["api"] for item in metrics for site in item["api_call_sites"]})
