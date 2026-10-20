@@ -1,8 +1,8 @@
 # ReForge Visuals — cache
 
-Status: **3.24.2 candidate generated; full static package audit and regression tests passed; in-world validation pending.**  
-Current candidate: `ReForge_Visuals-3.24.2.mcaddon`  
-Last reviewed: 2026-10-15
+Status: **3.24.5 candidate generated; static package/profile checks passed; in-world validation pending.**  
+Current candidate: `ReForge_Visuals-3.24.5.mcaddon`  
+Last reviewed: 2026-10-21
 
 ## Verified facts
 
@@ -27,6 +27,16 @@ Last reviewed: 2026-10-15
 | 2026-10-15 | Reconcile legacy and current biome water colors | 71 legacy water colors synchronized to their current `*.client_biome.json` colors; fog directives and legacy transparency preserved |
 | 2026-10-15 | Fix water schema, swamp classification and low-altitude fog routing | `sampleWidth=1.25` corrected to documented maximum 1.0; `minecraft:swampland` classification added; unresolved weather-fog keys below Y=31 suppressed |
 | 2026-10-15 | Full static audit and candidate package verification | 1,149 JSON parsed with duplicate-key rejection; 12 JS syntax/import checked; 513 fog IDs and 338 script fog references checked; 9 script sound IDs, 10 sound events, 12 OGG and 9 PNG assets checked; six subpacks / four water definitions each; 0 audit issues; ZIP CRC/path check PASS |
+
+## 3.24.5 water/fog candidate — static evidence only
+
+- Candidate artifact SHA-256: e611f536a5ebd3bcbfb75c3330bfe93f79f93fe852586b3bb0fc9a1b6af4b6f1; 4,997,533 bytes.
+- Static counts: 1,401 archive entries; 1,357 JSON files parsed; 721 fog JSONs; no duplicate archive paths, duplicate fog IDs or JSON errors.
+- Full fog inventory: 246 distance.water configs (22 biome base + 44 mode-specific + 180 time-stage/range variants); 23 water volumetric-density configs (22 biome fallback + central VV profile); 293 distance.air configs. All references for 44 mode profiles and 180 time/range variants resolve.
+- Static checks passed: both manifests and counterpart dependencies align to 3.24.5; 22 base water distance files at 24; 24 water settings across six subpacks reviewed; 63 surface colors adjusted without opacity change; 22 biome water-volume settings and the VV profile match the lower-density blue-biased gradient; Node syntax and mocked mode/biome/time tests pass.
+- Decisions: non-VV swamp 14; desert/mesa capped at 28; mode-specific distance profiles; time progression named time_water_stage_*; subtle blue-green entry/surface tint; waves kept as accent. Density progression still uses absolute world Y, not depth from the local water surface.
+- Runtime remains unknown: no Bedrock render, Content Log, target-device, multiplayer or performance test. No global hurt-tint patch was made because the global vanilla override would be broad and compatibility-prone.
+- Audit report ReForge_Visuals-3.24.5-audit.txt is a local handoff artifact; not hosted in this repository.
 
 ## Water tint decision
 
