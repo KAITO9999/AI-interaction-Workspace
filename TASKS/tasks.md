@@ -21,6 +21,11 @@
 - [ ] Evaluate storage adapters, app authentication (Auth0 candidate), and MCP authentication separately.
 - [ ] Design and validate the Executor++ icon; run static, integration, security-isolation, and Android runtime checks.
 
+- [ ] Record the exact model/provider identity for each substantive contribution whenever available; mark unknown rather than infer it.
+- [ ] Create a separate, extensible model-characteristics catalog for GPT-6, Sonnet 5, Grok 4.5 and future additions; mark unverified entries until authoritative evidence is found.
+- [ ] Require source URLs and source dates for every factual model claim, including capabilities, limits, benchmarks, context windows, modalities, availability, and pricing; preserve uncertainty and conflicting evidence.
+- [ ] Add a named second-model review path and structured AI self-audit for omissions, dependencies, inconsistencies, security risks, and acceptance evidence; findings require evidence and must not be treated as ground truth.
+
 ## Workspace project format and prompt routing
 
 - [x] Define `WORK_MODELS.md`, `PLAN.md`, `CACHE.md` and `IN_PROGRESS.md` as the canonical project record files.
