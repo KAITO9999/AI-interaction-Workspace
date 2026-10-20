@@ -76,7 +76,7 @@ def python_ast_findings(path: Path, source: str) -> list[dict]:
     seen = {}
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            normalized = ast.dump(node.body, annotate_fields=True, include_attributes=False)
+            normalized = ast.dump(ast.Module(body=node.body, type_ignores=[]), annotate_fields=True, include_attributes=False)
             digest = hashlib.sha256(normalized.encode()).hexdigest()
             if digest in seen:
                 first_name, first_line = seen[digest]
