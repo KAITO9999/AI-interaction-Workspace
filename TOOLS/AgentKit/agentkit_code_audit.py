@@ -22,7 +22,108 @@ EXTENSIONS = {
     ".sql", ".yaml", ".yml", ".toml", ".json", ".xml", ".html", ".css", ".scss",
 }
 SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "dist", "build", "target", "__pycache__", ".next", ".agentkit-logs"}
-COMMENT_RE = re.compile(r"^\s*(#|//|/\*|\*|<!--|--|;)")
+COMMENT_RE = re.compile(r"^\\s*(#|//|/\\*|<!--|--)")
+
+def mask_comments_and_strings(source: str, suffix: str) -> tuple[str, set[int]]:
+    """Mask comments and string literals without changing line numbers or code positions."""
+    suffix = suffix.lower()
+    line_comments = {"#", "//", "--"}
+    if suffix in {".py", ".pyi", ".sh", ".bash", ".zsh", ".ps1", ".psm1", ".yaml", ".yml", ".toml", ".r", ".rb", ".pl", ".pm"}:
+        line_comments = {"#"}
+    elif suffix in {".sql"}:
+        line_comments = {"--"}
+    elif suffix in {".html", ".xml", ".vue", ".svelte"}:
+        line_comments = set()
+    block_pairs = [("/*", "*/")] if suffix not in {".py", ".pyi", ".sh", ".bash", ".zsh", ".ps1", ".psm1", ".yaml", ".yml", ".toml", ".sql", ".rb", ".r", ".R", ".pl", ".pm"} else []
+    if suffix in {".html", ".xml", ".vue", ".svelte"}:
+        block_pairs.append(("<!--", "-->"))
+    chars = list(source)
+    comment_chars = set()
+    i = 0
+    quote = None
+    triple = False
+    escaped = False
+    block_end = None
+    line_has_code = False
+    line_comment_only = set()
+    current_line = 1
+    line_prefix_code = False
+    while i < len(chars):
+        ch = chars[i]
+        if ch == "\\n":
+            if current_line in comment_chars and not line_prefix_code:
+                line_comment_only.add(current_line)
+            current_line += 1
+            line_prefix_code = False
+            escaped = False
+            if quote and not triple and suffix not in {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".java", ".kt", ".go", ".rs", ".c", ".h", ".cc", ".cpp", ".hpp", ".cs", ".php", ".swift", ".m", ".mm", ".scala", ".dart", ".lua"}:
+                quote = None
+            i += 1
+            continue
+        if block_end:
+            if source.startswith(block_end, i):
+                for j in range(i, i + len(block_end)):
+                    if chars[j] != "\\n": chars[j] = " "
+                i += len(block_end)
+                block_end = None
+                continue
+            if ch != "\\n":
+                comment_chars.add(current_line)
+                chars[i] = " "
+            i += 1
+            continue
+        if quote:
+            if ch != "\\n": chars[i] = " "
+            if escaped:
+                escaped = False
+            elif ch == "\\\\":
+                escaped = True
+            elif triple and source.startswith(quote * 3, i):
+                for j in range(i, min(i + 3, len(chars))):
+                    if chars[j] != "\\n": chars[j] = " "
+                i += 3
+                quote = None
+                triple = False
+                continue
+            elif not triple and ch == quote:
+                quote = None
+            i += 1
+            continue
+        started = False
+        for opener, closer in block_pairs:
+            if source.startswith(opener, i):
+                block_end = closer
+                for j in range(i, i + len(opener)):
+                    if chars[j] != "\\n": chars[j] = " "
+                comment_chars.add(current_line)
+                i += len(opener)
+                started = True
+                break
+        if started:
+            continue
+        if any(source.startswith(marker, i) for marker in line_comments):
+            while i < len(chars) and chars[i] != "\\n":
+                comment_chars.add(current_line)
+                chars[i] = " "
+                i += 1
+            if not line_prefix_code:
+                line_comment_only.add(current_line)
+            continue
+        if suffix in {".py", ".pyi"} and ch in {"'", '"'} and source.startswith(ch * 3, i):
+            quote, triple = ch, True
+            for j in range(i, min(i + 3, len(chars))):
+                if chars[j] != "\\n": chars[j] = " "
+            i += 3
+            continue
+        if ch in {"'", '"', "`"}:
+            quote, triple = ch, False
+            chars[i] = " "
+            i += 1
+            continue
+        if not ch.isspace():
+            line_prefix_code = True
+        i += 1
+    return "".join(chars), line_comment_only
 RISKY_RE = [
     (re.compile(r"\beval\s*\("), "SECURITY", "HIGH", "Dynamic eval call", "Review whether untrusted text can reach eval; prefer explicit parsing.", "MEDIUM"),
     (re.compile(r"\bexec\s*\("), "SECURITY", "HIGH", "Dynamic exec call", "Review code/data boundaries and remove dynamic execution where possible.", "MEDIUM"),
@@ -96,23 +197,25 @@ def audit_file(path: Path, root: Path, max_bytes: int):
         return [finding(path, 1, "ENVIRONMENT", "LOW", "Could not read file", str(exc), "HIGH")], {}
     lines = source.splitlines()
     rel = path.relative_to(root)
-    out = python_ast_findings(rel, source) if path.suffix.lower() == ".py" else []
-    for number, line in enumerate(lines, 1):
+    masked, comment_only_lines = mask_comments_and_strings(source, path.suffix.lower())
+    masked_lines = masked.splitlines()
+    out = python_ast_findings(rel, source) if path.suffix.lower() in {".py", ".pyi"} else []
+    for number, line in enumerate(masked_lines, 1):
         for pattern, category, priority, title, detail, confidence in RISKY_RE:
             if pattern.search(line):
                 out.append(finding(rel, number, category, priority, title, detail, confidence))
-    comment_lines = sum(1 for line in lines if COMMENT_RE.match(line))
-    code_lines = sum(1 for line in lines if line.strip() and not COMMENT_RE.match(line))
+    comment_lines = len(comment_only_lines)
+    code_lines = sum(1 for line in masked_lines if line.strip())
     if len(lines) >= 30 and comment_lines / max(1, comment_lines + code_lines) > 0.40:
         out.append(finding(rel, 1, "MAINTAINABILITY", "LOW", "High comment-to-code ratio",
-            f"{comment_lines} comment-like lines vs {code_lines} code-like lines. Review stale/redundant narration; preserve useful rationale.", "HIGH"))
+            f"{comment_lines} comment-only lines vs {code_lines} code-like lines. Review stale/redundant narration; preserve useful rationale.", "HIGH"))
     max_run = run = 0
-    for line in lines:
-        run = run + 1 if COMMENT_RE.match(line) and line.strip() else 0
+    for number, line in enumerate(lines, 1):
+        run = run + 1 if number in comment_only_lines and line.strip() else 0
         max_run = max(max_run, run)
     if max_run >= 12:
         out.append(finding(rel, 1, "MAINTAINABILITY", "LOW", "Long consecutive comment block",
-            f"Found {max_run} consecutive comment-like lines; check whether material belongs in API docs/docstrings.", "HIGH"))
+            f"Found {max_run} consecutive comment-only lines; check whether material belongs in API docs/docstrings.", "HIGH"))
     return out, {"path": str(rel), "language_hint": path.suffix.lower().lstrip("."), "lines": len(lines),
                  "comment_like_lines": comment_lines, "bytes": size, "sha256": hashlib.sha256(source.encode()).hexdigest()}
 
