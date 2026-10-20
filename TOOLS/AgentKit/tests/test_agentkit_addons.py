@@ -45,7 +45,11 @@ class AgentKitAddonTests(unittest.TestCase):
             (root / "sample.js").write_text(
                 "// TODO eval('not code')\n"
                 "const text = \"eval('not code')\";\n"
-                "/* while (true) { eval('not code'); } */\n",
+                "/* while (true) { eval('not code'); } */\n"
+                "/*\n"
+                " * TODO eval('not code') while(true) { comment-only repeated line with enough length }\n"
+                " * TODO eval('not code') while(true) { comment-only repeated line with enough length }\n"
+                " */\n",
                 encoding="utf-8",
             )
             result = run(AUDIT, str(root), "--json", "report.json")
@@ -54,6 +58,9 @@ class AgentKitAddonTests(unittest.TestCase):
             false_positives = [item for item in report["findings"]
                                 if item["title"] in {"Dynamic eval call", "Deferred-work marker", "Unbounded loop pattern"}]
             self.assertEqual(false_positives, [])
+            duplicate_comments = [item for item in report["findings"]
+                                  if item["path"] == "sample.js" and item["title"] == "Repeated source line"]
+            self.assertEqual(duplicate_comments, [])
 
     def test_testfast_skips_exact_source_file_not_substring(self):
         with tempfile.TemporaryDirectory() as directory:
