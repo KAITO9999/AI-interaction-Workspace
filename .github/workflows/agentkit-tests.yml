@@ -46,3 +46,33 @@ jobs:
         run: python scripts/check_change_ledger.py
       - name: Check local Markdown links
         run: python scripts/check_markdown_links.py
+      - name: Build AgentKit tool bundle
+        run: |
+          python TOOLS/AgentKit/agentkit_bundle.py --root . --output agentkit-tools-bundle.zip \
+            --include TOOLS/AgentKit/README.md \
+            --include TOOLS/AgentKit/agentkit_js_load.py \
+            --include TOOLS/AgentKit/agentkit_lang_audit.py \
+            --include TOOLS/AgentKit/agentkit_code_audit.py \
+            --include TOOLS/AgentKit/agentkit_testfast.py \
+            --include TOOLS/AgentKit/agentkit_virtual_edit.py \
+            --include TOOLS/AgentKit/agentkit_mcp_bridge.py \
+            --include TOOLS/AgentKit/agentkit_bundle.py \
+            --include TOOLS/AgentKit/agentkit_route_probe.py \
+            --include TOOLS/AgentKit/agentkit_toolplan.py \
+            --include TOOLS/AgentKit/agentkit_env.py \
+            --include TOOLS/AgentKit/agentkit_observe.py \
+            --include TOOLS/AgentKit/agentkit_virtual_tools.json \
+            --include TOOLS/AgentKit/policies/01-runtime-profiles.md \
+            --include TOOLS/AgentKit/policies/02-language-platform-policy.md \
+            --include TOOLS/AgentKit/policies/03-environment-substitution.md \
+            --include TOOLS/AgentKit/policies/04-mcp-payload-bridge.md \
+            --include TOOLS/AgentKit/policies/05-virtual-edit-policy.md \
+            --include TOOLS/AgentKit/policies/06-bundle-and-route-policy.md \
+            --include TOOLS/AgentKit/policies/07-original-request-privacy.md
+      - name: Upload AgentKit bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentkit-tools-bundle
+          path: agentkit-tools-bundle.zip
+          if-no-files-found: error
+          retention-days: 14
