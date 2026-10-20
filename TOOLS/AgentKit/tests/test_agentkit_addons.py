@@ -136,6 +136,44 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertEqual(estimate["range_ms"], [1520.0, 3040.0])
             self.assertEqual(estimate["confidence"], "HIGH")
             self.assertEqual(estimate["components"]["api_wait_ms"], [20.0, 40.0])
+            self.assertTrue(any(item["title"] == "Multiple API batches in workload scenario" for item in report["findings"])
+
+    def test_js_load_honors_explicit_linear_clock_scaling_and_memory_guard(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "workload.json").write_text(json.dumps({
+                "schema_version": 1,
+                "operations": [{"kind": "cpu_ops", "count": 1000}],
+            }), encoding="utf-8")
+            (root / "calibration.json").write_text(json.dumps({
+                "schema_version": 1,
+                "target_runtime": "test runtime",
+                "profiles": {"mid": {
+                    "samples": 3,
+                    "cpu_ops_per_second": [1000, 2000],
+                    "reference_clock_ghz": 2.0,
+                    "allow_linear_clock_scaling": True,
+                }},
+            }), encoding="utf-8")
+            result = run(JSLOAD, "--root", str(root), "--profile", "mid", "--clock-ghz", "4",
+                         "--workload-json", "workload.json", "--calibration-json", "calibration.json",
+                         "--json", "scaled.json")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            scaled = json.loads((root / "scaled.json").read_text(encoding="utf-8"))["runtime_estimate"]
+            self.assertEqual(scaled["range_ms"], [250.0, 500.0])
+            self.assertIn("linear assumption", scaled["scaling_adjustments"][0])
+
+            (root / "workload.json").write_text(json.dumps({
+                "schema_version": 1,
+                "operations": [{"kind": "working_set_bytes", "count": 2_000_000_000}],
+            }), encoding="utf-8")
+            result = run(JSLOAD, "--root", str(root), "--profile", "mid", "--memory-gb", "1",
+                         "--workload-json", "workload.json", "--calibration-json", "calibration.json",
+                         "--json", "oversized.json")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            oversized = json.loads((root / "oversized.json").read_text(encoding="utf-8"))["runtime_estimate"]
+            self.assertIsNone(oversized["milliseconds"])
+            self.assertIn("exceeds the specified total physical memory", oversized["reason"])
 
     def test_audit_rejects_file_outside_root(self):
         with tempfile.TemporaryDirectory() as directory:
