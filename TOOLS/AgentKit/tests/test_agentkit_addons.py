@@ -128,7 +128,7 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             report = json.loads((root / "load.json").read_text(encoding="utf-8"))
             estimate = report["runtime_estimate"]
-            self.assertEqual(estimate["range_ms"], [1021.0, 2042.0])
+            self.assertEqual(estimate["range_ms"], [1520.0, 3040.0])
             self.assertEqual(estimate["confidence"], "HIGH")
             self.assertEqual(estimate["components"]["api_wait_ms"], [20.0, 40.0])
 
