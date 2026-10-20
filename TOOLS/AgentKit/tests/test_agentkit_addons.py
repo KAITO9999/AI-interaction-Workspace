@@ -81,7 +81,7 @@ class AgentKitAddonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "main.js").write_text(
-                "function tick(items) {\n"
+                "async function tick(items) {\n"
                 "  for (const item of items) {\n"
                 "    await fetch('/api/data');\n"
                 "  }\n"
