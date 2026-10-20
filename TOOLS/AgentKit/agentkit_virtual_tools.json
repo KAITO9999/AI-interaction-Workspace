@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "description": "Ten isolated logical tool slots. Slots are workspaces, not ten separate model instances.",
+  "slots": [
+    {
+      "id": "virtual-01",
+      "purpose": "environment probe",
+      "source_mutation": "disabled by default",
+      "shared_state": false
+    },
+    {
+      "id": "virtual-02",
+      "purpose": "code audit",
+      "source_mutation": "disabled by default",
+      "shared_state": false
+    },
+    {
+      "id": "virtual-03",
+      "purpose": "language audit",
+      "source_mutation": "disabled by default",
+      "shared_state": false
+    },
+    {
+      "id": "virtual-04",
+      "purpose": "runtime workload analysis",
+      "source_mutation": "disabled by default",
+      "shared_state": false
+    },
+    {
+      "id": "virtual-05",
+      "purpose": "test selection",
+      "source_mutation": "disabled by default",
+      "shared_state": false
+    },
+    {
+      "id": "virtual-06",
+      "purpose": "MCP payload selection",
+      "source_mutation": "disabled by default",
+      "shared_state": false
+    },
+    {
+      "id": "virtual-07",
+      "purpose": "artifact packaging",
+      "source_mutation": "disabled by default",
+      "shared_state": false
+    },
+    {
+      "id": "virtual-08",
+      "purpose": "download-route probe",
+      "source_mutation": "disabled by default",
+      "shared_state": false
+    },
+    {
+      "id": "virtual-09",
+      "purpose": "partial-edit inspection",
+      "source_mutation": "disabled by default",
+      "shared_state": false
+    },
+    {
+      "id": "virtual-10",
+      "purpose": "cross-tool integration review",
+      "source_mutation": "disabled by default",
+      "shared_state": false
+    }
+  ],
+  "policy": "See policies/05-virtual-edit-policy.md. The current virtual editor implements isolated copy-on-write overlays; the registry describes the intended ten-slot workflow, not ten independent AI agents."
+}
