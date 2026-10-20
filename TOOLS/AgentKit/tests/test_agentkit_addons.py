@@ -111,16 +111,16 @@ class AgentKitAddonTests(unittest.TestCase):
         script = ROOT / "agentkit_lang_audit.py"
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "native.cpp").write_text("int main() { while(true) {} }\\n", encoding="utf-8")
+            (root / "native.cpp").write_text("// arm64-v8a x86_64 x86\\nint main() { while(true) {} }\\n", encoding="utf-8")
             (root / "app.kt").write_text("fun draw() { Thread.sleep(1000) }\\n", encoding="utf-8")
-            (root / "AndroidManifest.xml").write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-sdk android:minSdkVersion="30"/><uses-feature android:glEsVersion="0x00030000" android:required="true"/></manifest>', encoding="utf-8")
+            (root / "AndroidManifest.xml").write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-sdk android:minSdkVersion="30"/><uses-feature android:glEsVersion="0x00030000" android:required="true"/><uses-feature android:name="android.hardware.vulkan.version" android:version="0x00400003" android:required="true"/></manifest>', encoding="utf-8")
             result = run(script, "--root", str(root), "--json", "lang.json")
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             report = json.loads((root / "lang.json").read_text(encoding="utf-8"))
             self.assertIn("cpp", report["languages_detected"])
             self.assertIn("kotlin", report["languages_detected"])
             self.assertEqual(report["android_min_sdk"], 30)
-            self.assertEqual(report["opengl_es_minimum"], "3.0")
+            self.assertEqual(report["opengl_es_minimum"], "3.0")\n            self.assertIn("arm64-v8a/AArch64", report["abis_detected"])\n            self.assertTrue(any(item["category"] == "VULKAN_BASELINE" for item in report["findings"]))
             self.assertTrue(any("heuristic" in item for item in report["limitations"]))
 
     def test_virtual_edit_overlay_preserves_original_until_apply(self):
