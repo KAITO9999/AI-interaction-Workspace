@@ -28,7 +28,6 @@ API_PATTERNS = [
 ]
 LOOP_RE = re.compile(r"\b(for|while|do)\b")
 FUNCTION_RE = re.compile(r"\bfunction\s*([A-Za-z_$][\w$]*)?\s*\(|\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)")
-CALL_RE = re.compile(r"\b([A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*)\s*\(")
 
 def mask_js(source: str) -> str:
     """Mask JS/TS comments and string/template literals while retaining offsets/newlines."""
@@ -136,7 +135,6 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
                             "evidence": "Literal delay only; browser throttling and callback execution affect actual frequency."
                         })
     for line_no in loop_lines:
-        line = lines[line_no - 1]
         end_line = line_no
         depth = 0
         started = False
@@ -150,7 +148,6 @@ def analyze_file(path: Path, root: Path) -> tuple[list[dict], dict]:
             if not started and idx > line_no:
                 end_line = idx + 1
                 break
-        body = "\n".join(lines[line_no - 1:end_line])
         contained = [api for api in api_call_sites if line_no <= api["line"] <= end_line]
         nested = sum(1 for other in loop_lines if line_no < other <= end_line)
         if contained:
