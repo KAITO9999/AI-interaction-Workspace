@@ -232,6 +232,10 @@ def load_workload(path: Path | None) -> dict | None:
         raise ValueError(f"could not read workload JSON: {exc}") from exc
     if not isinstance(data, dict) or data.get("schema_version") != 1 or not isinstance(data.get("operations"), list) or not data["operations"]:
         raise ValueError("workload JSON must be an object with schema_version=1 and a non-empty operations array")
+    if not isinstance(data.get("scenario"), str) or not data["scenario"].strip():
+        raise ValueError("workload JSON requires a non-empty scenario description")
+    if not isinstance(data.get("assumptions"), list) or not data["assumptions"] or not all(isinstance(item, str) and item.strip() for item in data["assumptions"]):
+        raise ValueError("workload JSON requires a non-empty assumptions array of strings")
     for index, operation in enumerate(data["operations"]):
         if not isinstance(operation, dict) or operation.get("kind") not in {"cpu_ops", "memory_bytes", "working_set_bytes", "api"}:
             raise ValueError(f"workload operation {index} must have kind cpu_ops, memory_bytes, working_set_bytes, or api")
@@ -271,6 +275,12 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
     target_runtime = calibration.get("target_runtime")
     if not isinstance(target_runtime, str) or not target_runtime.strip():
         return unavailable_estimate("Calibration is missing target_runtime metadata.", ["calibration target_runtime"])
+    evidence = calibration.get("evidence")
+    source_urls = evidence.get("source_urls") if isinstance(evidence, dict) else None
+    method = evidence.get("measurement_method") if isinstance(evidence, dict) else None
+    if (not isinstance(method, str) or not method.strip() or not isinstance(source_urls, list) or not source_urls
+            or not all(isinstance(url, str) and url.startswith(("https://", "http://")) for url in source_urls)):
+        return unavailable_estimate("Calibration must document its measurement method and at least one source URL; the tool does not independently verify the source contents.", ["calibration evidence.measurement_method", "calibration evidence.source_urls"])
     def valid_range(value):
         if not isinstance(value, list) or len(value) != 2:
             return False
@@ -348,7 +358,7 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
     samples = profile_data.get("samples", 0)
     confidence = "HIGH" if isinstance(samples, int) and samples >= 10 else "MEDIUM" if isinstance(samples, int) and samples >= 3 else "LOW"
     return {"milliseconds": round((low + high) / 2, 3), "range_ms": [low, high], "confidence": confidence,
-            "target_runtime": target_runtime, "calibration_samples": samples if isinstance(samples, int) else 0,
+            "target_runtime": target_runtime, "calibration_samples": samples if isinstance(samples, int) else 0, "calibration_evidence": evidence, "scenario": workload["scenario"], "workload_assumptions": workload["assumptions"],
             "assumption": "Serial component sum; API concurrency is represented by explicit batches. CPU and memory ranges must be measured on the selected target runtime.",
             "components": {"cpu_ms": [round(cpu_low, 3), round(cpu_high, 3)],
                            "memory_transfer_ms": [round(memory_low, 3), round(memory_high, 3)],
