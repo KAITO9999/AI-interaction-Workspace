@@ -104,6 +104,46 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertTrue(outside.exists())
 
+
+    def test_audit_confidence_ranks_duplicates_and_separates_performance_log(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "one.py").write_text("def alpha():\\n    return 1234567890123456789012345678901234567890\\n", encoding="utf-8")
+            (root / "two.py").write_text("def beta():\\n    return 1234567890123456789012345678901234567890\\n", encoding="utf-8")
+            result = run(AUDIT, str(root), "--log-dir", "logs", "--json", "report.json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads((root / "report.json").read_text(encoding="utf-8"))
+            duplicate_findings = [item for item in report["findings"] if item["category"] == "DUPLICATION"]
+            self.assertTrue(duplicate_findings)
+            self.assertTrue(all(item["detection_confidence"] == "HIGH" for item in duplicate_findings))
+            self.assertTrue(all(item["review_recommended"] is False for item in duplicate_findings))
+            self.assertTrue((root / "logs" / "code-audit-findings.jsonl").exists())
+            performance = json.loads((root / "logs" / "code-audit-performance.jsonl").read_text(encoding="utf-8").splitlines()[0])
+            self.assertGreaterEqual(performance["elapsed_seconds"], 0)
+            self.assertGreater(performance["bytes_read"], 0)
+
+    def test_testfast_quick_mode_logs_skipped_tests_and_environment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "test_sample.py").write_text(
+                "import unittest\\nclass Sample(unittest.TestCase):\\n"
+                "    def test_fast_smoke(self): self.assertTrue(True)\\n"
+                "    def test_slow_full(self): self.assertTrue(True)\\n",
+                encoding="utf-8",
+            )
+            script = ROOT / "agentkit_testfast.py"
+            result = run(script, "--root", str(root), "--quick", "--log-dir", "logs")
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertIn("Environment probe", result.stdout)
+            self.assertIn("partial test selection", result.stdout)
+            runtime = json.loads((root / "logs" / "test-runtime.jsonl").read_text(encoding="utf-8").splitlines()[0])
+            self.assertEqual(runtime["selected_count"], 1)
+            self.assertEqual(runtime["skipped_count"], 1)
+            self.assertIn("environment_fingerprint", runtime)
+            skips = (root / "logs" / "test-skips.jsonl").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(skips), 1)
+            self.assertIn("test_slow_full", skips[0])
+
     def test_toolplan_reports_available_path_without_invoking_command(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
