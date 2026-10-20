@@ -83,9 +83,11 @@ class AgentKitAddonTests(unittest.TestCase):
             (root / "main.js").write_text(
                 "function tick(items) {\n"
                 "  for (const item of items) {\n"
-                "    fetch('/api/data');\n"
+                "    await fetch('/api/data');\n"
                 "  }\n"
-                "}\n",
+                "}\n"
+                "export function publicEntry() {}\n"
+                "function maybeUnused() {}\n",
                 encoding="utf-8",
             )
             result = run(JSLOAD, "--root", str(root), "--profile", "mid", "--json", "load.json")
@@ -97,6 +99,9 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertIn("runtime_estimate", report)
             self.assertIsNone(report["runtime_estimate"]["milliseconds"])
             self.assertTrue(any(item["category"] == "API_LOAD" for item in report["findings"]))
+            self.assertTrue(any(item["title"] == "Call site inside loop" for item in report["findings"]))
+            unused = [item for item in report["findings"] if item["title"] == "Function may have no direct references"]
+            self.assertEqual([item["detail"].split()[0] for item in unused], ["maybeUnused"])
 
     def test_js_load_uses_explicit_workload_and_profile_calibration(self):
         with tempfile.TemporaryDirectory() as directory:
