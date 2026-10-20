@@ -156,7 +156,11 @@ def build_report(root: Path, selected_profiles: list[str], explicit_android: int
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        prog="agentkit-mobile-test",
+        description="Build a static smartphone profile matrix and preflight Android minSdk compatibility.",
+        epilog="Examples: mobile_test.py --root ./app; mobile_test.py --root ./app --profile low-end --android-version 11 --json /tmp/mobile.json",
+    )
     parser.add_argument("--version", action="version", version=VERSION)
     parser.add_argument("--root", default=".", help="Android/project root (default: current directory).")
     parser.add_argument("--profile", action="append", choices=sorted(PROFILES),
