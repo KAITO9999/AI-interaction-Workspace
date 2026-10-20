@@ -222,8 +222,8 @@ def load_workload(path: Path | None) -> dict | None:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"could not read workload JSON: {exc}") from exc
-    if not isinstance(data, dict) or data.get("schema_version") != 1 or not isinstance(data.get("operations"), list):
-        raise ValueError("workload JSON must be an object with schema_version=1 and an operations array")
+    if not isinstance(data, dict) or data.get("schema_version") != 1 or not isinstance(data.get("operations"), list) or not data["operations"]:
+        raise ValueError("workload JSON must be an object with schema_version=1 and a non-empty operations array")
     for index, operation in enumerate(data["operations"]):
         if not isinstance(operation, dict) or operation.get("kind") not in {"cpu_ops", "memory_bytes", "working_set_bytes", "api"}:
             raise ValueError(f"workload operation {index} must have kind cpu_ops, memory_bytes, working_set_bytes, or api")
@@ -245,6 +245,8 @@ def unavailable_estimate(reason: str, required_inputs: list[str]) -> dict:
             "reason": reason, "required_inputs": required_inputs}
 
 def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict | None, target_specs: dict) -> dict:
+    if workload is not None and not any(op["kind"] in {"cpu_ops", "memory_bytes", "api"} and op["count"] > 0 for op in workload["operations"]):
+        return unavailable_estimate("The workload contains no duration-bearing operations; a working-set size alone is not an execution-time estimate.", ["at least one positive cpu_ops, memory_bytes, or api operation"])
     if workload is None or calibration is None:
         missing = []
         if workload is None:
@@ -359,6 +361,11 @@ def main() -> int:
     if not root.is_dir():
         print(f"ERROR: root is not a directory: {root}", file=sys.stderr)
         return 2
+    for option_name, value in (("--clock-ghz", args.clock_ghz), ("--cores", args.cores),
+                               ("--memory-gb", args.memory_gb), ("--memory-bandwidth-gbps", args.memory_bandwidth_gbps)):
+        if value is not None and value <= 0:
+            print(f"ERROR: {option_name} must be greater than zero.", file=sys.stderr)
+            return 2
     profile = {"tier": args.profile, "auto_detected": False, "clock_ghz": args.clock_ghz, "cores": args.cores,
                "memory_gb": args.memory_gb, "memory_bandwidth_gbps": args.memory_bandwidth_gbps,
                "note": "All target specifications are user-supplied assumptions. Tier names alone do not determine execution speed."}
