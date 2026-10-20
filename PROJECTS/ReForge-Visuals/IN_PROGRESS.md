@@ -1,22 +1,24 @@
 # ReForge Visuals — editing / handoff
 
-Current status: **Candidate 3.24.2 packaged and all static checks pass; in-world validation remains active/pending.** The output add-on was produced locally at `/mnt/data/ReForge_Visuals-3.24.2.mcaddon`; it has not been committed as a binary to this public repository.
+Current status: **Candidate 3.24.5 packaged; static ZIP/JSON/manifest/profile and mocked controller checks pass; in-world validation pending.** Binary assets remain local handoff artifacts and are not committed to this public repository.
 
 ## Active work
 
-### RFV-3242 — water tint and full static defect audit
+### RFV-3245 — Separate VV/non-VV water fog and tune color progression
 
-- **Status:** static implementation complete; awaiting in-world validation
+- **Status:** static implementation complete; awaiting Bedrock runtime and visual validation
 - **Actor:** AI
-- **Work mode:** mixed (local archive inspection/tests plus official documentation and GitHub connector research)
-- **Scope:** supplied `ReForge_Visuals-3.24.1.mcaddon`; patch candidate `3.24.2`.
-- **Verified cause candidate:** in all six subpacks default water had `biome_water_color_contribution=0.04`; current biome `surface_color` values mostly specify blue `#4077E4`. Official documentation explains that this 0–1 factor controls how much biome surface color tints Vibrant Visuals water and gives 0.2 as an example: https://learn.microsoft.com/en-us/minecraft/creator/documents/vibrantvisuals/watercustomization?view=minecraft-bedrock-stable.
-- **Water routing:** 53 client biomes use `reforge_visuals:default_water`, 6 use `ocean_water`, 4 use `warm_ocean_water`, 2 use `river_water`; 7 have no explicit water identifier. Ocean/warm-ocean values remain 0.14, while default water is now 0.20 and river water 0.12.
-- **Changes:** synchronized 71 legacy water colors; added `minecraft:swampland` to water-biome classification; corrected four medium-shadow `sampleWidth=1.25` values to 1.0 and corrected the label; stopped unresolved weather-fog key generation below Y=31 and reset its altitude transition latch.
-- **Checks run:** full static audit on a clean extraction of the built archive reports 0 findings; 1,149 JSON parse/duplicate-key checks pass; 12 JS files pass Node syntax/import resolution; 513 fog IDs and 338 generated/static references checked; all six subpacks and wave schemas pass; 12 OGG and 9 PNG assets checked; 8 regression tests pass; ZIP CRC/path checks pass. Compared with the original archive, 1,172 existing members are byte-identical, 20 changed and only root `CHANGELOG.md` added; no original member removed.
-- **Evidence:** local handoff report `/mnt/data/ReForge_Visuals-3.24.2-audit.txt`; regression suite `/mnt/data/reforge_audit/test_regressions.py`; full audit `/mnt/data/reforge_audit/full_audit.py`.
-- **UNKNOWN:** no Bedrock in-world session, Content Log, screenshots, target-device or multiplayer performance test ran. The static change is a supported tuning choice but the rendered improvement cannot be guaranteed until checked in-game.
-- **Next action / receiver:** test exact candidate 3.24.2 in a real world, with Vibrant Visuals both on/off, across default water, river, ocean, swamp/mangrove/lush-cave biomes and relevant subpack tiers; capture Content Log and visual evidence. Only then close the water-color issue.
+- **Work mode:** mixed (local archive build/inspection, official documentation, GitHub connector review and read-only Termux environment inspection). HyAI Lane was not used.
+- **Scope:** input candidate ReForge_Visuals-3.24.4.mcaddon; output ReForge_Visuals-3.24.5.mcaddon.
+- **Intent:** standard water distance 24; non-VV swamp 14; desert and mesa capped at 28; biome-specific short/middle/wide distances split between VV (graphicsMode=Deferred) and non-VV. Preserve water substance/opacity and the blue depth feel; apply only a slight blue-green surface/entry tint. Waves remain an accent.
+- **Water/fog sweep:** parsed all 721 fog JSON files (452 weather, 180 time-progressive stages, 44 mode-specific water-distance profiles, 22 altitude, 22 biome, 1 other). Reviewed 246 distance.water configurations, 23 water volumetric-density configurations, 293 distance.air configurations, all 22 biome fogs, 71 client-biome water appearances and all 24 water settings across six subpacks.
+- **Edits:** generated 44 VV/non-VV distance profiles; standardized 22 base biome water ranges to 24; generated 180 time-stage/range variants so time progression does not flatten the active distance; renamed active identifiers/labels to time_water_stage_* / reforge_time_water; retained old reforge_night_water only for one-time old-stack cleanup. VV depth volume is dynamically pushed only in VV mode.
+- **Color/depth tuning:** nudged blue/cobalt client-biome palette slightly toward blue-green in 63 files without changing surface_opacity. Base/entry water fog colors get a restrained green bias. VV chlorophyll rose slightly while biome contribution and caustics settings stayed unchanged. All 22 biome fallback volumes and the central VV volume now use max_density=0.38, max_density_height=0, zero_density_height=72 with blue-biased scattering and red/green absorption stronger than blue absorption. This replaces the old 0.58 / Y=0..63 profile. The coordinates are absolute world Y, not depth relative to local water surface.
+- **Wave treatment:** on active higher subpacks, wave depth/mix/pull/speed were reduced; disabled tiers remain disabled and water opacity was left unchanged.
+- **Damage flash:** deliberately unchanged. The pack has no existing entity/render-controller/material override path. Global vanilla-mob hurt tint would require broad render-controller replacements with compatibility risk; official render-controller fields are per-controller, not a pack-wide tint switch.
+- **Checks run:** size 4,997,533 bytes; SHA-256 e611f536a5ebd3bcbfb75c3330bfe93f79f93fe852586b3bb0fc9a1b6af4b6f1. All 21 static/mocked checks passed: ZIP CRC, duplicate paths, all 1,357 JSON parse, unique fog IDs, both manifests/dependencies at 3.24.5, base/variant ranges and references, surface opacity, water volume parameters, stale-name scan, Node syntax and mocked mode/biome/time transitions.
+- **UNKNOWN / not run:** no Bedrock launch, Content Log, actual rendering/screenshot, target-device or multiplayer measurement. AgentKit audit-addon exists on Termux but could not run on this exact candidate because Termux cannot read the session's /mnt/data path; a local static audit was used instead. The artifact was not copied to Android /storage/emulated/0/Download; no transfer path was available. HyAI Lane was not used.
+- **Next action / receiver:** import the exact 3.24.5 artifact into a real world and complete P1 in PLAN.md, testing VV and Simple. Check mode switches, underwater biome changes, entry transition and Content Log before declaring the visual issue fixed.
 
 ## Active item template
 
@@ -64,3 +66,16 @@ Append one record per related command set so another AI/person can consume resul
 - **Classification:** FACT for static results; UNKNOWN for in-world appearance
 - **Known limits / not checked:** runtime rendering, Content Log, target-device, multiplayer performance
 - **Next action:** execute P1 in [PLAN.md](PLAN.md), record actual runtime version and visual/Content Log outcomes before considering the issue closed
+
+
+### Handoff record — RFV-3245 static candidate / 2026-10-21
+
+- **Actor:** AI
+- **Work mode:** mixed
+- **Purpose / scope:** static validation and handoff for VV/non-VV water/fog rework.
+- **Command(s):** python /tmp/build_reforge_3245.py; local archive checks; Node --check; Node mocked-controller test.
+- **Result:** candidate written; 21 checks passed; complete fog inventory captured in the audit report.
+- **Evidence:** ReForge_Visuals-3.24.5.mcaddon and ReForge_Visuals-3.24.5-audit.txt are local handoff artifacts. Artifact SHA-256 is recorded in RFV-3245.
+- **Classification:** FACT for static checks; UNKNOWN for real Bedrock rendering.
+- **Known limits:** no game runtime; no Termux copy of the exact artifact; no global mob hurt-color patch.
+- **Next action:** run candidate in-world with VV and Simple, capture visual/Content Log evidence, then record the results.
