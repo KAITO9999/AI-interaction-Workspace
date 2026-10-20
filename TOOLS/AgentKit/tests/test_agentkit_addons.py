@@ -149,6 +149,12 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertEqual(json.loads(output.read_text(encoding="utf-8")), {"text": "only this"})
             self.assertNotIn("secret-like payload", result.stdout)
 
+    def test_route_probe_rejects_private_destination_before_network_access(self):
+        script = ROOT / "agentkit_route_probe.py"
+        result = run(script, "https://127.0.0.1/artifact.zip")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("non-public destination", result.stderr)
+
     def test_bundle_tool_creates_downloadable_zip_without_network_access(self):
         script = ROOT / "agentkit_bundle.py"
         with tempfile.TemporaryDirectory() as directory:
