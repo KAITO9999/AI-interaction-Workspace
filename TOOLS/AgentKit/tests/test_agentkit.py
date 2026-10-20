@@ -6,6 +6,10 @@ def run(*args,input_text=None,timeout=12,env=None):
 class AgentKitTests(unittest.TestCase):
     def test_help_version(self):
         self.assertEqual(run("--help").returncode,0); self.assertIn("0.1.0",run("--version").stdout)
+        for command in ("probe", "fetch-probe", "locate", "note", "ingest", "timer", "versions"):
+            result = run(command, "--help")
+            self.assertEqual(result.returncode, 0, command + ": " + result.stderr)
+            self.assertIn("usage:", result.stdout.lower())
     def test_probe_json(self):
         with tempfile.TemporaryDirectory() as d:
             Path(d,"x.py").write_text("print('ok')"); out=Path(d,"r.json")
