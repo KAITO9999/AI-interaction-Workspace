@@ -27,7 +27,8 @@ def main():
   if a.action=="show":
    e=m["slots"][a.slot].get(a.file)
    if not e:raise ValueError("no staged overlay")
-   print(f"[{a.slot}] staged overlay; 10 isolated virtual slots available")\n   print((root/e["overlay"]).read_text(encoding="utf-8"),end="");return 0
+   print(f"[{a.slot}] staged overlay; 10 isolated virtual slots available")
+   print((root/e["overlay"]).read_text(encoding="utf-8"),end="");return 0
   if a.action=="list":
    for slot in ([a.slot] if a.slot else SLOTS):
     for name,e in sorted(m["slots"][slot].items()):print(f"{slot}\t{name}\t{e['overlay']}")
