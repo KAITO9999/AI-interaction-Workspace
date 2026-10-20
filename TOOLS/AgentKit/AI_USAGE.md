@@ -59,3 +59,12 @@ These are reference candidates, not vendored dependencies. Check the current rep
 - Installation is disabled unless `--install` is explicitly supplied; only fixed package mappings and supported package managers are allowed.
 - Never add automatic retries, shell interpolation, privilege escalation, or unreviewed arbitrary package names.
 - After an install attempt, verify the executable and rerun a bounded task-specific test. Report install success separately from task success.
+
+
+## Explicit environment selection and help contract
+
+- Every CLI entry point must expose useful `--help`; every core/extension subcommand must have a concise summary and usable subcommand help. Add regression tests for help output when adding a new tool.
+- Auto-detection remains the default. Where an environment selector exists, document the accepted values and whether it changes execution, package-manager policy, or report labeling. An environment override must never be described as emulating a remote OS.
+- Emit `注意、代替コマンドな為既存とは動作が異なります` to stderr only when execution actually selects a non-preferred external command or a substitute implementation. Include which path was selected and the preferred command where useful.
+- Do not put the runtime compatibility warning in ordinary help output or print it for AgentKit's own native tools. Help should explain purpose, arguments, defaults, side effects, and limitations.
+- Preserve explicit opt-in for installs and network/mutating actions; an environment override must not expand permissions or bypass those gates.
