@@ -76,6 +76,15 @@ class AgentKitAddonTests(unittest.TestCase):
             skips = (root / "logs" / "test-skips.jsonl").read_text(encoding="utf-8")
             self.assertIn("test_one", skips)
             self.assertNotIn("test_two", skips)
+            exact = run(TESTFAST, "--root", str(root), "--skip-test-id", "test_alphabet.Alphabet.test_two", "--log-dir", "exact-logs")
+            self.assertEqual(exact.returncode, 0, exact.stderr + exact.stdout)
+            self.assertIn("test_one", exact.stderr + exact.stdout)
+            self.assertNotIn("test_two", exact.stderr + exact.stdout)
+            exact_skips = (root / "exact-logs" / "test-skips.jsonl").read_text(encoding="utf-8")
+            self.assertIn("test_alphabet.Alphabet.test_two", exact_skips)
+            unknown = run(TESTFAST, "--root", str(root), "--skip-test-id", "test_alphabet.Alphabet.test", "--log-dir", "unknown-logs")
+            self.assertEqual(unknown.returncode, 2)
+            self.assertIn("unknown exact test ID", unknown.stderr)
 
     def test_js_load_model_is_explicit_and_does_not_probe_host(self):
         with tempfile.TemporaryDirectory() as directory:
