@@ -228,8 +228,8 @@ def load_workload(path: Path | None) -> dict | None:
     if not isinstance(data, dict) or data.get("schema_version") != 1 or not isinstance(data.get("operations"), list):
         raise ValueError("workload JSON must be an object with schema_version=1 and an operations array")
     for index, operation in enumerate(data["operations"]):
-        if not isinstance(operation, dict) or operation.get("kind") not in {"cpu_ops", "memory_bytes", "api"}:
-            raise ValueError(f"workload operation {index} must have kind cpu_ops, memory_bytes, or api")
+        if not isinstance(operation, dict) or operation.get("kind") not in {"cpu_ops", "memory_bytes", "working_set_bytes", "api"}:
+            raise ValueError(f"workload operation {index} must have kind cpu_ops, memory_bytes, working_set_bytes, or api")
         count = operation.get("count")
         if isinstance(count, bool) or not isinstance(count, int) or count < 0:
             raise ValueError(f"workload operation {index} count must be a non-negative integer")
@@ -247,7 +247,7 @@ def unavailable_estimate(reason: str, required_inputs: list[str]) -> dict:
     return {"milliseconds": None, "range_ms": None, "confidence": "INSUFFICIENT_DATA",
             "reason": reason, "required_inputs": required_inputs}
 
-def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict | None) -> dict:
+def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict | None, target_specs: dict) -> dict:
     if workload is None or calibration is None:
         missing = []
         if workload is None:
@@ -266,6 +266,25 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
         return unavailable_estimate("Calibration is missing target_runtime metadata.", ["calibration target_runtime"])
     cpu_rate = profile_data.get("cpu_ops_per_second")
     memory_rate = profile_data.get("memory_bytes_per_second")
+    scaling_adjustments = []
+    target_clock = target_specs.get("clock_ghz")
+    reference_clock = profile_data.get("reference_clock_ghz")
+    if valid_range(cpu_rate) and isinstance(target_clock, (int, float)) and isinstance(reference_clock, (int, float)) and reference_clock > 0:
+        if profile_data.get("allow_linear_clock_scaling") is True:
+            factor = float(target_clock) / float(reference_clock)
+            cpu_rate = [float(rate) * factor for rate in cpu_rate]
+            scaling_adjustments.append(f"CPU throughput rates scaled by target/reference clock ratio {factor:.4f}; this is an explicit linear assumption, not a universal CPU law.")
+        elif float(target_clock) != float(reference_clock):
+            scaling_adjustments.append("Target clock differs from calibration reference, but calibration did not authorize linear scaling; CPU rates were left unchanged.")
+    target_bandwidth = target_specs.get("memory_bandwidth_gbps")
+    reference_bandwidth = profile_data.get("reference_memory_bandwidth_gbps")
+    if valid_range(memory_rate) and isinstance(target_bandwidth, (int, float)) and isinstance(reference_bandwidth, (int, float)) and reference_bandwidth > 0:
+        if profile_data.get("allow_linear_memory_bandwidth_scaling") is True:
+            factor = float(target_bandwidth) / float(reference_bandwidth)
+            memory_rate = [float(rate) * factor for rate in memory_rate]
+            scaling_adjustments.append(f"Memory throughput rates scaled by target/reference bandwidth ratio {factor:.4f}; this assumes matching access patterns.")
+        elif float(target_bandwidth) != float(reference_bandwidth):
+            scaling_adjustments.append("Target memory bandwidth differs from calibration reference, but calibration did not authorize scaling; measured rates were left unchanged.")
     api_rates = profile_data.get("api_latency_ms", {})
     if not isinstance(api_rates, dict):
         api_rates = {}
@@ -276,6 +295,11 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
     missing = []
     needs_cpu = any(op["kind"] == "cpu_ops" and op["count"] for op in workload["operations"])
     needs_memory = any(op["kind"] == "memory_bytes" and op["count"] for op in workload["operations"])
+    working_sets = [op["count"] for op in workload["operations"] if op["kind"] == "working_set_bytes" and op["count"]]
+    target_memory_gb = target_specs.get("memory_gb")
+    if working_sets and isinstance(target_memory_gb, (int, float)) and target_memory_gb > 0:
+        if max(working_sets) > float(target_memory_gb) * 1_000_000_000:
+            return unavailable_estimate("A declared working set exceeds the specified total physical memory; this workload estimate is invalid until the scenario or target memory assumptions are corrected.", ["reduce working_set_bytes or specify a larger target memory capacity"])
     if needs_cpu and not valid_range(cpu_rate):
         missing.append("profiles." + profile_name + ".cpu_ops_per_second [minimum, maximum]")
     if needs_memory and not valid_range(memory_rate):
@@ -294,6 +318,8 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
         elif operation["kind"] == "memory_bytes" and count:
             memory_low += count / float(memory_rate[1]) * 1000
             memory_high += count / float(memory_rate[0]) * 1000
+        elif operation["kind"] == "working_set_bytes":
+            continue
         elif operation["kind"] == "api" and count:
             latency_low, latency_high = api_rates[operation["name"]]
             batches = math.ceil(count / operation["concurrency"])
@@ -309,7 +335,7 @@ def estimate_runtime(profile_name: str, workload: dict | None, calibration: dict
             "components": {"cpu_ms": [round(cpu_low, 3), round(cpu_high, 3)],
                            "memory_transfer_ms": [round(memory_low, 3), round(memory_high, 3)],
                            "api_wait_ms": [round(api_low, 3), round(api_high, 3)]},
-            "required_inputs": []}
+            "required_inputs": [], "scaling_adjustments": scaling_adjustments}
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -355,7 +381,7 @@ def main() -> int:
             return 2
         findings.extend(found)
         metrics.append(metric)
-    runtime_estimate = estimate_runtime(args.profile, workload, calibration)
+    runtime_estimate = estimate_runtime(args.profile, workload, calibration, profile)
     if calibration is not None:
         runtime_estimate["calibration_loaded"] = True
     if workload is not None:
@@ -366,6 +392,8 @@ def main() -> int:
               "runtime_estimate": runtime_estimate,
               "model_policy": ["No host environment discovery or automatic target inference.",
                                "Tier names are labels, not hidden performance multipliers.",
+                               "Clock and bandwidth affect rates only when the calibration explicitly authorizes a scaling model.",
+                               "Core count is not multiplied into main-thread JavaScript throughput; worker/parallel execution needs a separate workload model.",
                                "A clock rate is not a reliable substitute for engine-specific throughput benchmarks.",
                                "Static call-site findings do not prove dynamic call counts or dead code.",
                                "Runtime estimate remains unavailable rather than inventing precision when workload bounds or calibrated rates are missing."]}
