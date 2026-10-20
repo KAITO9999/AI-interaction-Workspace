@@ -32,7 +32,7 @@ Last reviewed: 2026-10-21
 
 ## 3.24.5 water/fog candidate — static evidence only
 
-- Candidate artifact SHA-256: e611f536a5ebd3bcbfb75c3330bfe93f79f93fe852586b3bb0fc9a1b6af4b6f1; 4,997,533 bytes.
+- Candidate artifact SHA-256: c7198deba6878ba18afbb437ce0824f7b938ca12e124d36ccd4dff7a86061f48; 4,997,537 bytes.
 - Static counts: 1,401 archive entries; 1,357 JSON files parsed; 721 fog JSONs; no duplicate archive paths, duplicate fog IDs or JSON errors.
 - Full fog inventory: 246 distance.water configs (22 biome base + 44 mode-specific + 180 time-stage/range variants); 23 water volumetric-density configs (22 biome fallback + central VV profile); 293 distance.air configs. All references for 44 mode profiles and 180 time/range variants resolve.
 - Static checks passed: both manifests and counterpart dependencies align to 3.24.5; 22 base water distance files at 24; 24 water settings across six subpacks reviewed; 63 surface colors adjusted without opacity change; 22 biome water-volume settings and the VV profile match the lower-density blue-biased gradient; Node syntax and mocked mode/biome/time tests pass.
