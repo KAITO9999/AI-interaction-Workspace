@@ -90,7 +90,7 @@ class AgentKitAddonTests(unittest.TestCase):
                 "function maybeUnused() {}\n",
                 encoding="utf-8",
             )
-            result = run(JSLOAD, "--root", str(root), "--profile", "mid", "--json", "load.json")
+            result = run(JSLOAD, "--root", str(root), "--profile", "mid", "--json", "load.json", "--workload-template", "template.json")
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             self.assertNotIn("Environment probe", result.stdout)
             report = json.loads((root / "load.json").read_text(encoding="utf-8"))
@@ -102,6 +102,10 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertTrue(any(item["title"] == "Call site inside loop" for item in report["findings"]))
             unused = [item for item in report["findings"] if item["title"] == "Function may have no direct references"]
             self.assertEqual([item["detail"].split()[0] for item in unused], ["maybeUnused"])
+            template = json.loads((root / "template.json").read_text(encoding="utf-8"))
+            self.assertTrue(template["template_only"])
+            self.assertIsNone(template["operation_candidates"][0]["count"])
+            self.assertTrue(template["operation_candidates"][0]["source_sites"])
 
     def test_js_load_uses_explicit_workload_and_profile_calibration(self):
         with tempfile.TemporaryDirectory() as directory:
