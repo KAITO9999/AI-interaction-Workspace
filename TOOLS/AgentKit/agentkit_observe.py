@@ -59,22 +59,33 @@ def initial_log_file(log_dir: Path) -> tuple[Path | None, str | None]:
         return None, f"{type(exc).__name__}: {exc}"
 
 
-def append_event(log_path: Path, event: str, **fields: Any) -> bool:
-    record = {"time": now(), "event": event, **fields}
-    try:
-        with log_path.open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
-            stream.flush()
-        return True
-    except OSError as exc:
-        emit_stderr_record(
-            "log_write_failed",
-            path=str(log_path),
-            error_type=type(exc).__name__,
-            error=str(exc),
-            fallback="subsequent diagnostics are emitted to stderr; no alternate path is probed",
-        )
-        return False
+class EventLogger:
+    """Append until a write fails; after that, never attempt filesystem writes again."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.enabled = True
+
+    def event(self, event: str, **fields: Any) -> bool:
+        record = {"time": now(), "event": event, **fields}
+        if not self.enabled:
+            emit_stderr_record(event, **fields, persistence_disabled=True)
+            return False
+        try:
+            with self.path.open("a", encoding="utf-8") as stream:
+                stream.write(json.dumps(record, ensure_ascii=False, default=str) + "\\n")
+                stream.flush()
+            return True
+        except OSError as exc:
+            self.enabled = False
+            emit_stderr_record(
+                "log_write_failed",
+                path=str(self.path),
+                error_type=type(exc).__name__,
+                error=str(exc),
+                fallback="all further events go to stderr; no alternate path or filesystem retry",
+            )
+            return False
 
 
 def proc_snapshot(pid: int) -> dict[str, Any]:
@@ -97,14 +108,16 @@ def proc_snapshot(pid: int) -> dict[str, Any]:
     except OSError as exc:
         result["status_error"] = f"{type(exc).__name__}: {exc}"
     try:
-        fields = (proc / "stat").read_text(encoding="utf-8").split()
-        if len(fields) > 21:
+        raw_stat = (proc / "stat").read_text(encoding="utf-8")
+        _, separator, remainder = raw_stat.partition(") ")
+        fields = remainder.split() if separator else []
+        if len(fields) > 19:
             result["stat"] = {
-                "state": fields[2],
-                "parent_pid": fields[3],
-                "user_ticks": fields[13],
-                "system_ticks": fields[14],
-                "start_ticks": fields[21],
+                "state": fields[0],
+                "parent_pid": fields[1],
+                "user_ticks": fields[11],
+                "system_ticks": fields[12],
+                "start_ticks": fields[19],
             }
     except (OSError, IndexError, ValueError) as exc:
         result["stat_error"] = f"{type(exc).__name__}: {exc}"
@@ -153,7 +166,7 @@ def run_observed(command: list[str], log_dir: Path, interval: float, duration: f
         trace_mode = "strace_attempted"
     else:
         trace_mode = "fallback_process_and_output_telemetry"
-    append_event(
+    logger.event(
         log_path, "session_start", version=VERSION, cwd=os.getcwd(),
         log_dir=str(log_dir.resolve()), command=command, trace_mode=trace_mode,
         syscall_log=str(trace_log) if trace_prefix else None,
@@ -173,12 +186,12 @@ def run_observed(command: list[str], log_dir: Path, interval: float, duration: f
             bufsize=1, close_fds=True, start_new_session=(os.name == "posix"),
         )
     except OSError as exc:
-        append_event(log_path, "process_start_failed", argv=argv,
+        logger.event(log_path, "process_start_failed", argv=argv,
                      error_type=type(exc).__name__, error=str(exc))
         emit_stderr_record("process_start_failed", argv=argv, error=str(exc), log_path=str(log_path))
         return 127
 
-    append_event(log_path, "process_started", pid=process.pid, argv=argv)
+    logger.event(log_path, "process_started", pid=process.pid, argv=argv)
     messages: queue.Queue[tuple[str, str | None]] = queue.Queue()
     assert process.stdout is not None
     reader = threading.Thread(target=_reader, args=(process.stdout, messages), daemon=True)
@@ -197,7 +210,7 @@ def run_observed(command: list[str], log_dir: Path, interval: float, duration: f
                 sample_number += 1
                 snapshot = proc_snapshot(process.pid)
                 if logging_available:
-                    logging_available = append_event(log_path, "process_sample",
+                    logging_available = logger.event(log_path, "process_sample",
                                                        sample_number=sample_number, **snapshot)
                 next_sample = current + interval
 
@@ -205,11 +218,11 @@ def run_observed(command: list[str], log_dir: Path, interval: float, duration: f
                 kind, value = messages.get(timeout=min(0.1, interval))
                 if kind == "output" and value is not None:
                     if logging_available:
-                        logging_available = append_event(log_path, "child_output", line=value)
+                        logging_available = logger.event(log_path, "child_output", line=value)
                     print(value, flush=True)
                 elif kind == "reader_error":
                     if logging_available:
-                        logging_available = append_event(log_path, "output_reader_error", detail=value)
+                        logging_available = logger.event(log_path, "output_reader_error", detail=value)
                 elif kind == "eof":
                     reader_eof = True
             except queue.Empty:
@@ -219,14 +232,14 @@ def run_observed(command: list[str], log_dir: Path, interval: float, duration: f
                 break
             if time.monotonic() - start >= duration and process.poll() is None:
                 timed_out = True
-                append_event(log_path, "duration_limit_reached", seconds=duration)
+                logger.event(log_path, "duration_limit_reached", seconds=duration)
                 try:
                     if os.name == "posix":
                         os.killpg(process.pid, signal.SIGTERM)
                     else:
                         process.terminate()
                 except OSError as exc:
-                    append_event(log_path, "terminate_failed", error=str(exc))
+                    logger.event(log_path, "terminate_failed", error=str(exc))
                 try:
                     process.wait(timeout=2.0)
                 except subprocess.TimeoutExpired:
@@ -236,10 +249,10 @@ def run_observed(command: list[str], log_dir: Path, interval: float, duration: f
                         else:
                             process.kill()
                     except OSError as exc:
-                        append_event(log_path, "kill_failed", error=str(exc))
+                        logger.event(log_path, "kill_failed", error=str(exc))
                 break
     except KeyboardInterrupt:
-        append_event(log_path, "interrupted_by_user")
+        logger.event(log_path, "interrupted_by_user")
         try:
             if os.name == "posix":
                 os.killpg(process.pid, signal.SIGTERM)
@@ -262,7 +275,7 @@ def run_observed(command: list[str], log_dir: Path, interval: float, duration: f
         except OSError:
             pass
 
-    append_event(log_path, "session_end", pid=process.pid, returncode=return_code,
+    logger.event(log_path, "session_end", pid=process.pid, returncode=return_code,
                  timed_out=timed_out, elapsed_seconds=round(time.monotonic() - start, 3),
                  sample_count=sample_number, syscall_log=str(trace_log) if trace_prefix else None,
                  syscall_trace_claimed=bool(trace_prefix and trace_log.exists() and trace_log.stat().st_size > 0))
