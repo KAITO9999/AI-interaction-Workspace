@@ -22,18 +22,20 @@ EXTENSIONS = {
     ".sql", ".yaml", ".yml", ".toml", ".json", ".xml", ".html", ".css", ".scss",
 }
 SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "dist", "build", "target", "__pycache__", ".next", ".agentkit-logs"}
-COMMENT_RE = re.compile(r"^\\s*(#|//|/\\*|<!--|--)")
+COMMENT_RE = re.compile(r"^\s*(#|//|/\*|<!--|--)")
 
 def mask_comments_and_strings(source: str, suffix: str) -> tuple[str, set[int]]:
     """Mask comments and string literals without changing line numbers or code positions."""
     suffix = suffix.lower()
-    line_comments = {"#", "//", "--"}
+    line_comments = {"//"}
     if suffix in {".py", ".pyi", ".sh", ".bash", ".zsh", ".ps1", ".psm1", ".yaml", ".yml", ".toml", ".r", ".rb", ".pl", ".pm"}:
         line_comments = {"#"}
     elif suffix in {".sql"}:
         line_comments = {"--"}
-    elif suffix in {".html", ".xml", ".vue", ".svelte"}:
+    elif suffix in {".html", ".xml", ".vue", ".svelte", ".css", ".scss"}:
         line_comments = set()
+    elif suffix == ".php":
+        line_comments = {"#", "//"}
     block_pairs = [("/*", "*/")] if suffix not in {".py", ".pyi", ".sh", ".bash", ".zsh", ".ps1", ".psm1", ".yaml", ".yml", ".toml", ".sql", ".rb", ".r", ".R", ".pl", ".pm"} else []
     if suffix in {".html", ".xml", ".vue", ".svelte"}:
         block_pairs.append(("<!--", "-->"))
@@ -270,9 +272,10 @@ def main() -> int:
                 content_seen[metric["sha256"]].append(metric["path"])
                 try:
                     text = path.read_text(encoding="utf-8", errors="replace")
-                    for number, line in enumerate(text.splitlines(), 1):
+                    masked_text, _ = mask_comments_and_strings(text, path.suffix.lower())
+                    for number, line in enumerate(masked_text.splitlines(), 1):
                         stripped = line.strip()
-                        if len(stripped) >= 40 and not COMMENT_RE.match(stripped):
+                        if len(stripped) >= 40:
                             line_seen[stripped].append((metric["path"], number))
                 except OSError:
                     pass
