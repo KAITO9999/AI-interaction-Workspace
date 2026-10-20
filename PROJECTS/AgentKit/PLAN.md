@@ -15,13 +15,13 @@
 - **Complete when:** every added parameter has a source or measurement and an explicit rationale; do not invent values to fill gaps.
 - **Current state:** RAM budgets are set to 4/8/12/16 GB; no other hardware parameters were found in the current AgentKit source to tune.
 
-
 ## P3 — Agent capability toolchain (research-backed)
 
-- **Outcome:** AgentKit can discover, safely enable, and verify tools that materially improve practical task completion.
-- **Priority:** (1) Playwright CLI/MCP/Test for browser interaction and UI regression; (2) workspace-scoped shell/filesystem/patch adapters; (3) deterministic evaluation and regression-test evidence; (4) separately named reviewer-agent integration; (5) MCP tool-surface/security audit.
-- **Research record:** see [AGENT_CAPABILITY_TOOLS.md](../../TOOLS/AgentKit/AGENT_CAPABILITY_TOOLS.md) for source URLs, integration rules and acceptance criteria.
-- **Implementation sequence:** discover installed tools without executing unknown binaries; record exact observed versions and confidence; run bounded help/version/smoke checks; implement only adapters supported by evidence; emit structured evidence packets; add recovery and adversarial tests.
-- **Safety:** no automatic package installs, unrestricted shell, hidden credential collection, or broad browser permissions. Require explicit workspace roots, timeouts, output caps, least privilege and approval for consequential external actions.
-- **Complete when:** availability probes, safe adapters, result schema, unit tests, integration tests and security/fault-injection tests pass in a named environment. A plan or static check is not runtime proof.
-- **Current state:** sourced research/design recorded. A standard-library capability inventory and bounded version-probe CLI have been implemented; CI passed on commit `0f80d46d921dbf1023eb11dbe9a705e56c94708e`. Browser execution adapters and target-device/runtime integration are not yet implemented or verified.
+- **Outcome:** discover, safely select, integrate and evaluate tools/workflows that improve real task completion, prioritizing near-unlimited local/self-hosted options where practical.
+- **Research record:** [AGENT_CAPABILITY_TOOLS.md](../../TOOLS/AgentKit/AGENT_CAPABILITY_TOOLS.md) documents papers, reported effect sizes, limits, open-source/self-hosted candidates and integration priorities.
+- **Evidence-derived priority:** (1) environment tool use + execution feedback; (2) deterministic tests and postcondition verification; (3) repository/document retrieval; (4) bounded adaptive search/repair; (5) durable checkpoints; (6) multiple agents only for independent tasks or a distinct reviewer.
+- **Implementation sequence:** inventory available local model runtimes, browser/test tools and sandbox/container backends without executing unknown binaries; then build bounded adapters, evidence packets, recovery behavior, regression tasks and security/fault-injection tests.
+- **Near-unlimited policy:** prefer local inference through Ollama or llama.cpp where model quality and device resources suffice; evaluate vLLM for capable GPU servers. Open-source agent frameworks do not remove hosted-model costs unless configured to use local inference. Document hardware/model-license constraints.
+- **Safety:** no automatic installs, unrestricted shell or broad browser permissions. Use explicit workspace roots, path containment, timeouts, output caps, least privilege and approval for consequential external actions.
+- **Complete when:** the chosen environment has verified probes, safe adapters, a repeatable baseline evaluation, measured comparisons, and unit/integration/security tests. A literature survey or static check alone does not prove runtime improvement.
+- **Current state:** capability inventory and bounded version probes are implemented; an initial research catalog now maps empirical findings to broad candidate options. Browser execution adapters, local-inference setup, sandbox adapters and task-level comparisons are not yet implemented or verified.
