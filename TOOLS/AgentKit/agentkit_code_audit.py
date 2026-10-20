@@ -46,7 +46,6 @@ def mask_comments_and_strings(source: str, suffix: str) -> tuple[str, set[int]]:
     triple = False
     escaped = False
     block_end = None
-    line_has_code = False
     line_comment_only = set()
     current_line = 1
     line_prefix_code = False
