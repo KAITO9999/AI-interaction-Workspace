@@ -233,6 +233,9 @@ def main() -> int:
     # --install explicitly tries to install the preferred tool even when a less-preferred
     # alternative (for example `find`) is already available. JSON-report remains read-only.
     preferred = TASKS[args.task]["commands"][0]
+    if args.install and args.environment != "auto" and args.environment != detect_environment():
+        print(f"ERROR: --install is blocked because explicit environment {args.environment!r} does not match the current execution environment {detect_environment()!r}. Environment selection does not enable remote installation.", file=sys.stderr)
+        return 2
     if args.install and not args.prefer_fallback and not shutil.which(preferred):
         install_status = try_install(preferred, args.timeout, args.environment)
         if install_status == 0:
