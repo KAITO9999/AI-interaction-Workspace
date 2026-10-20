@@ -108,8 +108,8 @@ class AgentKitAddonTests(unittest.TestCase):
     def test_audit_confidence_ranks_duplicates_and_separates_performance_log(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "one.py").write_text("def alpha():\\n    return 1234567890123456789012345678901234567890\\n", encoding="utf-8")
-            (root / "two.py").write_text("def beta():\\n    return 1234567890123456789012345678901234567890\\n", encoding="utf-8")
+            (root / "one.py").write_text("def alpha():\n    return 1234567890123456789012345678901234567890\n", encoding="utf-8")
+            (root / "two.py").write_text("def beta():\n    return 1234567890123456789012345678901234567890\n", encoding="utf-8")
             result = run(AUDIT, str(root), "--log-dir", "logs", "--json", "report.json")
             self.assertEqual(result.returncode, 0, result.stderr)
             report = json.loads((root / "report.json").read_text(encoding="utf-8"))
@@ -126,9 +126,9 @@ class AgentKitAddonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "test_sample.py").write_text(
-                "import unittest\\nclass Sample(unittest.TestCase):\\n"
-                "    def test_fast_smoke(self): self.assertTrue(True)\\n"
-                "    def test_slow_full(self): self.assertTrue(True)\\n",
+                "import unittest\nclass Sample(unittest.TestCase):\n"
+                "    def test_fast_smoke(self): self.assertTrue(True)\n"
+                "    def test_slow_full(self): self.assertTrue(True)\n",
                 encoding="utf-8",
             )
             script = ROOT / "agentkit_testfast.py"
