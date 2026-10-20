@@ -19,3 +19,13 @@ Last reviewed: 2026-10-21
 ## Completed items moved from PLAN
 
 | 2026-10-21 | Add smartphone profile preflight and automated compatibility gate | PASS; 39 AgentKit unit tests passed in GitHub Actions on Ubuntu; Python compilation and shell syntax checks passed; provenance validation passed; 115 repository-local Markdown links checked. Pull request: [#13](https://github.com/KAITO9999/AI-interaction-Workspace/pull/13). Physical-device/emulator tests remain pending.
+
+
+## Research review — near-unlimited agent capability candidates (2026-10-21)
+
+- **Evidence reviewed:** PAL, ReAct, SWE-agent, SWE-bench, self-consistency, Tree of Thoughts, test-time scaling survey, RAG, Self-Refine, reflection limits, multi-agent debate and a 2026 Nature Machine Intelligence study on collaboration limits.
+- **Decision:** prioritize execution with real feedback and objective verification; use retrieval for project knowledge; use bounded adaptive search/repair only when checks show the first attempt failed; keep multi-agent debate optional.
+- **Candidate families:** Ollama/llama.cpp (local model serving), Aider/SWE-agent/OpenHands SDK/Cline (agent interfaces), Playwright MCP/Browser Use (browser), Inspect AI/Promptfoo/Hypothesis (evaluation/testing), local Markdown/JSON/Git checkpoints (durable memory), Chroma (optional semantic retrieval), and vLLM (GPU server).
+- **Near-unlimited interpretation:** local inference avoids per-token hosted-model fees but remains bounded by hardware, energy, speed, context, model license and model capability. Open-source tools connected to a paid/limited API are not near-unlimited in this sense.
+- **Full sources:** see [AGENT_CAPABILITY_TOOLS.md](../../TOOLS/AgentKit/AGENT_CAPABILITY_TOOLS.md).
+- **Limitations:** no candidate was installed or run as part of this research pass. Availability, security, hardware fit and end-to-end improvement remain UNKNOWN pending probes and fixed-task evaluation.
