@@ -119,3 +119,32 @@ Package installation is **off by default**. `--install` explicitly permits one b
 ### 9. Termux-derived tool candidates
 
 See [TERMUX_TOOL_CANDIDATES.md](TERMUX_TOOL_CANDIDATES.md) for the observed Termux command inventory summary and non-duplicating feature proposals. The resolver also supports 7-Zip for archive listing and Termux's `pkg` package manager when running in a detected Termux environment.
+
+
+### Source-code audit
+
+    python3 TOOLS/AgentKit/agentkit_code_audit.py path/to/project --json /tmp/code-audit.json
+    python3 TOOLS/AgentKit/agentkit_code_audit.py path/to/project --fail-on medium
+
+The read-only audit emits category, priority, file/line, rationale, and a suggested review. It checks common patterns including eval/exec, shell-enabled subprocess calls, bare exception handlers, long Python functions, simple local-call arity mismatches, and comment-heavy files. Comment ratio is only a review signal: preserve useful design rationale and API documentation.
+
+It recognizes extensions from many language ecosystems, but Python gets AST-based checks while other languages currently get generic text heuristics. This is not full semantic support for every language. Prefer installed language-specific analyzers (for example Ruff/Pylint/Mypy, ESLint/tsc, or ShellCheck) for deeper analysis. AgentKit does not install or replace them automatically; heuristic findings can be false positives.
+
+### Sequential ZIP extraction and tagged cleanup
+
+    python3 TOOLS/AgentKit/agentkit_zipset.py extract path/to/zip-folder --output /tmp/agentkit-expanded --tag task-123
+    python3 TOOLS/AgentKit/agentkit_zipset.py list --output /tmp/agentkit-expanded --tag task-123
+    python3 TOOLS/AgentKit/agentkit_zipset.py delete --output /tmp/agentkit-expanded --older-than-days 14
+    python3 TOOLS/AgentKit/agentkit_zipset.py delete --output /tmp/agentkit-expanded --all --yes
+
+Directory mode processes ZIPs sequentially in sorted order, one archive at a time. Each archive gets its own `name（zip）` directory, preserving the ZIP's internal folders. A manifest stores IDs, source, output, timestamp, and tags. Delete operations are dry-run unless `--yes` is given, and only manifest-tracked directories contained in the output root may be removed. The extractor rejects traversal/symlink entries, limits archive size, and does not overwrite existing extraction directories.
+
+### Command and fallback planner
+
+    python3 TOOLS/AgentKit/agentkit_toolplan.py search
+    python3 TOOLS/AgentKit/agentkit_toolplan.py code-audit --json
+    python3 TOOLS/AgentKit/agentkit_toolplan.py zip-batch --paths-only
+
+The planner lists candidate commands and their PATH locations without executing them, plus a fallback and its limitations. It never installs or replaces commands.
+
+Standard commands remain preferred when present. Fallbacks are used only when no preferred command is detected, unless `--prefer-fallback` is explicitly supplied.
