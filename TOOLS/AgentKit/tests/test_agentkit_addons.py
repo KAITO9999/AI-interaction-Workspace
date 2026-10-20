@@ -36,16 +36,16 @@ class AgentKitAddonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "sample.py").write_text(
-                "# TODO eval('not code') while True:\\n"
-                "def sample():\\n"
-                "    text = \"eval('not code') TODO while True:\"\\n"
-                "    return text\\n",
+                "# TODO eval('not code') while True:\n"
+                "def sample():\n"
+                "    text = \"eval('not code') TODO while True:\"\n"
+                "    return text\n",
                 encoding="utf-8",
             )
             (root / "sample.js").write_text(
-                "// TODO eval('not code')\\n"
-                "const text = \"eval('not code')\";\\n"
-                "/* while (true) { eval('not code'); } */\\n",
+                "// TODO eval('not code')\n"
+                "const text = \"eval('not code')\";\n"
+                "/* while (true) { eval('not code'); } */\n",
                 encoding="utf-8",
             )
             result = run(AUDIT, str(root), "--json", "report.json")
@@ -59,13 +59,13 @@ class AgentKitAddonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "test_alpha.py").write_text(
-                "import unittest\\nclass Alpha(unittest.TestCase):\\n"
-                "    def test_one(self): self.assertTrue(True)\\n",
+                "import unittest\nclass Alpha(unittest.TestCase):\n"
+                "    def test_one(self): self.assertTrue(True)\n",
                 encoding="utf-8",
             )
             (root / "test_alphabet.py").write_text(
-                "import unittest\\nclass Alphabet(unittest.TestCase):\\n"
-                "    def test_two(self): self.assertTrue(True)\\n",
+                "import unittest\nclass Alphabet(unittest.TestCase):\n"
+                "    def test_two(self): self.assertTrue(True)\n",
                 encoding="utf-8",
             )
             result = run(TESTFAST, "--root", str(root), "--skip-file", "test_alpha.py", "--log-dir", "logs")
@@ -81,11 +81,11 @@ class AgentKitAddonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "main.js").write_text(
-                "function tick(items) {\\n"
-                "  for (const item of items) {\\n"
-                "    fetch('/api/data');\\n"
-                "  }\\n"
-                "}\\n",
+                "function tick(items) {\n"
+                "  for (const item of items) {\n"
+                "    fetch('/api/data');\n"
+                "  }\n"
+                "}\n",
                 encoding="utf-8",
             )
             result = run(JSLOAD, "--root", str(root), "--profile", "mid", "--json", "load.json")
