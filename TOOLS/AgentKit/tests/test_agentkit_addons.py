@@ -137,6 +137,9 @@ class AgentKitAddonTests(unittest.TestCase):
             self.assertEqual(estimate["confidence"], "HIGH")
             self.assertEqual(estimate["components"]["api_wait_ms"], [20.0, 40.0])
             self.assertTrue(any(item["title"] == "Multiple API batches in workload scenario" for item in report["findings"]))
+            log_records = [json.loads(line) for line in (root / ".agentkit-logs" / "js-load-analysis.jsonl").read_text(encoding="utf-8").splitlines()]
+            self.assertTrue(any(item.get("record_type") == "finding" and item.get("category") == "API_LOAD" for item in log_records))
+            self.assertTrue(any(item.get("record_type") == "summary" for item in log_records))
 
     def test_js_load_honors_explicit_linear_clock_scaling_and_memory_guard(self):
         with tempfile.TemporaryDirectory() as directory:
