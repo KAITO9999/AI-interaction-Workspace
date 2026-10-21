@@ -18,6 +18,16 @@ class RouteSelectionTests(unittest.TestCase):
         self.assertEqual(report["route"], "agentkit_fallback")
         self.assertFalse(report["automatic_install"])
 
+    def test_agentkit_native_task_is_not_labeled_as_a_fallback(self):
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "mcp-inventory", "--plan"],
+            capture_output=True, text=True, timeout=10, check=False
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["route"], "agentkit_native")
+        self.assertIn("AgentKit-native", report["compatibility"])
+
     def test_execution_prints_compatibility_warning_for_fallback(self):
         with __import__("tempfile").TemporaryDirectory() as directory:
             source = Path(directory) / "sample.py"
