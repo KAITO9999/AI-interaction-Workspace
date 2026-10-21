@@ -25,7 +25,7 @@ TASKS: dict[str, dict[str, Any]] = {
 
 def plan(task: str, force_fallback: bool = False) -> dict[str, Any]:
     spec = TASKS[task]
-    commands = spec["preferred"]
+    commands = spec["preferred"] or []
     if isinstance(commands, str):
         commands = [commands]
     found = [(name, shutil.which(name)) for name in commands if name and shutil.which(name)]
