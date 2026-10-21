@@ -34,7 +34,7 @@ Current status: new MCP discovery, Ruff fallback and route-selector implementati
 
 ## AK-ROUTE-MCP-001 — Ruff fallback, automatic route selection and MCP detection
 
-- **Status:** source and initial tests added; CI/runtime verification pending.
+- **Status:** implementation and regression tests pass GitHub Actions; GPT-hosted MCP connection inspection remains unavailable from the local process.
 - **Actor:** AI.
 - **Work mode:** online (official Ruff docs and GitHub source reviewed; GitHub connector used for repository reads/writes).
 - **Scope:** implement an honest, reduced Python lint fallback; select direct commands or AgentKit fallback routes; inspect known local MCP config paths without exposing secrets.
@@ -42,4 +42,6 @@ Current status: new MCP discovery, Ruff fallback and route-selector implementati
 - **Ruff source reference:** https://github.com/astral-sh/ruff and https://github.com/astral-sh/ruff/blob/main/docs/configuration.md. Fallback currently covers syntax/parse errors (E999) and conservative unused-import checks (F401) only; formatting is explicitly unsupported without official Ruff.
 - **MCP boundary:** detector inspects known local config paths and explicit config files only. It redacts server argument values, environment values and URL paths/query strings. It cannot observe GPT-hosted MCP connections.
 - **Out of scope:** Playwright/browser automation and local LLM setup/serving are not AgentKit deliverables.
-- **Next action:** run focused tests and full CI; fix failures before marking tasks complete. Then inspect the CI result and distinguish local config discovery from actual server connectivity.
+- **Checks:** Python compilation PASS; POSIX shell syntax PASS; complete AgentKit tests PASS; change-ledger provenance PASS; local Markdown links PASS. CI: https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/39520945738.
+- **Classification:** FACT — local config detection, reduced Ruff fallback and route selector pass repository CI. UNKNOWN — whether any discovered MCP server is live/authenticated; hosted GPT MCP connections are not visible to the local detector.
+- **Next action:** implement a host-metadata adapter only if an authorized GPT-side tool/connector can export sanitized tool availability; otherwise keep hosted MCP state explicitly unknown. Continue route receipts and postcondition verification.
