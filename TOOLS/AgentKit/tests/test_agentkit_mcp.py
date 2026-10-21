@@ -42,6 +42,26 @@ class McpDiscoveryTests(unittest.TestCase):
             self.assertNotIn("TOP_SECRET", result.stdout)
             self.assertNotIn("server.py", result.stdout)
 
+    def test_discovers_codex_toml_and_client_specific_transport(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            home = root / "home"
+            codex = home / ".codex" / "config.toml"
+            codex.parent.mkdir(parents=True)
+            codex.write_text(
+                '[mcp_servers."codex-local"]\ncommand = "node"\nargs = ["server.js"]\n'
+                '[mcp_servers."codex-remote"]\nurl = "https://mcp.example.test/sse?token=HIDDEN"\ntype = "sse"\n',
+                encoding="utf-8"
+            )
+            result = run("--root", str(root / "project"), "--home", str(home), "--format", "json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(result.stdout)
+            servers = {item["name"]: item for item in report["servers"]}
+            self.assertEqual(servers["codex-local"]["command"], "node")
+            self.assertEqual(servers["codex-remote"]["transport"], "sse")
+            self.assertNotIn("server.js", result.stdout)
+            self.assertNotIn("HIDDEN", result.stdout)
+
     def test_reports_invalid_config_without_crashing(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
