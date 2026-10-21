@@ -29,7 +29,12 @@ def plan(task: str, force_fallback: bool = False) -> dict[str, Any]:
     if isinstance(commands, str):
         commands = [commands]
     found = [(name, shutil.which(name)) for name in commands if name and shutil.which(name)]
-    if found and not force_fallback:
+    if not commands:
+        selected_name = None
+        route = "agentkit_native"
+        selected = str(HERE / spec["fallback"])
+        compatibility = "AgentKit-native task; no external command replacement is assumed"
+    elif found and not force_fallback:
         selected_name, selected_path = found[0]
         route = "direct"
         selected = selected_path
