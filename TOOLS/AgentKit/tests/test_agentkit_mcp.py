@@ -28,7 +28,7 @@ class McpDiscoveryTests(unittest.TestCase):
                         "args": ["server.py", "--token", "TOP_SECRET"],
                         "env": {"API_TOKEN": "TOP_SECRET"}
                     },
-                    "remote-tool": {"url": "https://mcp.example.test/sse?token=TOP_SECRET}
+                    "remote-tool": {"url": "https://mcp.example.test/sse?token=TOP_SECRET"}
                 }
             }), encoding="utf-8")
             result = run("--root", str(root), "--home", str(root / "home"), "--format", "json")
