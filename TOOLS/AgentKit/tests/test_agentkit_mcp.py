@@ -1,0 +1,67 @@
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+SCRIPT = Path(__file__).resolve().parents[1] / "agentkit_mcp.py"
+
+
+def run(*args, env=None):
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), *args],
+        capture_output=True, text=True, env=env, timeout=10, check=False
+    )
+
+
+class McpDiscoveryTests(unittest.TestCase):
+    def test_discovers_project_mcp_config_without_exposing_secret_values(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / ".mcp.json"
+            config.write_text(json.dumps({
+                "mcpServers": {
+                    "local-tool": {
+                        "command": "python3",
+                        "args": ["server.py", "--token", "TOP_SECRET"],
+                        "env": {"API_TOKEN": "TOP_SECRET"}
+                    },
+                    "remote-tool": {"url": "https://mcp.example.test/sse?token=TOP_SECRET}
+                }
+            }), encoding="utf-8")
+            result = run("--root", str(root), "--home", str(root / "home"), "--format", "json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(result.stdout)
+            servers = {item["name"]: item for item in report["servers"]}
+            self.assertIn("local-tool", servers)
+            self.assertEqual(servers["local-tool"]["command"], "python3")
+            self.assertEqual(servers["local-tool"]["env_keys"], ["API_TOKEN"])
+            self.assertEqual(servers["remote-tool"]["transport"], "http")
+            self.assertNotIn("TOP_SECRET", result.stdout)
+            self.assertNotIn("server.py", result.stdout)
+
+    def test_reports_invalid_config_without_crashing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".mcp.json").write_text("{broken", encoding="utf-8")
+            result = run("--root", str(root), "--home", str(root / "home"), "--format", "json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(result.stdout)
+            self.assertEqual(len(report["config_errors"]), 1)
+            self.assertIn(".mcp.json", report["config_errors"][0]["path"])
+
+    def test_no_config_is_an_explicit_empty_result(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            result = run("--root", str(root), "--home", str(root / "home"), "--format", "json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(result.stdout)
+            self.assertEqual(report["servers"], [])
+            self.assertEqual(report["status"], "no_local_mcp_config_found")
+            self.assertIn("GPT-hosted MCP connections are not observable", " ".join(report["limitations"]))
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
