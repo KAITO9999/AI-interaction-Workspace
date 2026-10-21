@@ -62,6 +62,23 @@ class McpDiscoveryTests(unittest.TestCase):
             self.assertNotIn("server.js", result.stdout)
             self.assertNotIn("HIDDEN", result.stdout)
 
+    def test_supports_jsonc_comments_without_leaking_comment_text(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".vscode").mkdir()
+            config = root / ".vscode" / "mcp.json"
+            config.write_text(
+                '// local MCP config\n{\n  "servers": {\n'
+                '    "commented": { "type": "stdio", "command": "python3", "args": ["--secret", "DO_NOT_PRINT"] },\n'
+                '  },\n}\n',
+                encoding="utf-8"
+            )
+            result = run("--root", str(root), "--home", str(root / "home"), "--format", "json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(result.stdout)
+            self.assertEqual(report["servers"][0]["name"], "commented")
+            self.assertNotIn("DO_NOT_PRINT", result.stdout)
+
     def test_reports_invalid_config_without_crashing(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
