@@ -1,27 +1,41 @@
 # AgentKit — plan
 
-## P1 — Verify smartphone profiles on an Android test environment
+## P0 — MCP configuration discovery and execution-route selection
 
-- **Outcome:** validate profile gating against an actual Android emulator or physical device, separately from static preflight.
-- **Prerequisite:** a representative Android project/APK, emulator or authorized device, and a repeatable test procedure.
-- **Checks:** run low-end (4 GB / Android 11) and mid-end (8 GB / Android 15) cases where available; confirm rejection/skip behavior and record device OS, memory limits, logs and results.
-- **Complete when:** runtime results are reproducible and static preflight results remain clearly separated from runtime evidence.
-- **Current state:** not run; the current feature is a static test-plan/preflight only.
+- **Outcome:** inspect supported local MCP configuration locations safely, inventory configured server metadata without secret values, and automatically choose a permitted route for supported tasks.
+- **Implementation:** `TOOLS/AgentKit/agentkit_mcp.py` inventories known Claude Desktop/Code, Cursor, VS Code and Codex config paths plus explicit config paths. `TOOLS/AgentKit/agentkit_routes.py` selects the first available allowlisted command or a documented AgentKit fallback.
+- **Safety:** no credential-store, shell-history, arbitrary home-directory or conversation-history scanning; no secret values, raw server arguments or URL query/path output; no auto-install; no security/permission bypass.
+- **Important boundary:** local configuration discovery cannot observe MCP connections managed by the hosted GPT process. Use host-provided connection/tool metadata for that layer. Configured is not the same as reachable, authenticated or functional.
+- **Complete when:** fixture tests cover common config shapes, malformed files, redaction, empty results, route precedence, fallback warnings and execution failures; CI passes; live connection state remains explicitly marked unknown unless independently verified.
 
-## P2 — Validate memory-budget realism with representative devices
+## P1 — Ruff-compatible route with honest reduced fallback
 
-- **Outcome:** decide whether additional CPU/GPU/core/thermal constraints are justified.
-- **Prerequisite:** measured data from named device classes or a user-approved hardware matrix.
-- **Complete when:** every added parameter has a source or measurement and an explicit rationale; do not invent values to fill gaps.
-- **Current state:** RAM budgets are set to 4/8/12/16 GB; no other hardware parameters were found in the current AgentKit source to tune.
+- **Outcome:** use official Ruff when available; otherwise run a bounded Python standard-library fallback for the subset that AgentKit can implement safely.
+- **Fallback support:** syntax/parse errors (E999) and conservative unused-import checks (F401). No source mutation or automatic fix.
+- **Limitations:** this fallback is not Ruff-compatible; it does not implement all Ruff rules, configuration semantics, scope analysis, formatting or autofix. Formatting must use official Ruff; if unavailable, return an explicit unsupported status.
+- **Complete when:** tests prove route selection, syntax failure, unused-import detection, clean-file behavior, no source mutation and explicit unsupported formatting; reports identify the engine and compatibility level.
 
-## P3 — Agent capability toolchain (research-backed)
+## P2 — Unified route reports and verification
 
-- **Outcome:** discover, safely select, integrate and evaluate tools/workflows that improve real task completion, prioritizing near-unlimited local/self-hosted options where practical.
-- **Research record:** [AGENT_CAPABILITY_TOOLS.md](../../TOOLS/AgentKit/AGENT_CAPABILITY_TOOLS.md) documents papers, reported effect sizes, limits, open-source/self-hosted candidates and integration priorities.
-- **Evidence-derived priority:** (1) environment tool use + execution feedback; (2) deterministic tests and postcondition verification; (3) repository/document retrieval; (4) bounded adaptive search/repair; (5) durable checkpoints; (6) multiple agents only for independent tasks or a distinct reviewer.
-- **Implementation sequence:** inventory available local model runtimes, browser/test tools and sandbox/container backends without executing unknown binaries; then build bounded adapters, evidence packets, recovery behavior, regression tasks and security/fault-injection tests.
-- **Near-unlimited policy:** prefer local inference through Ollama or llama.cpp where model quality and device resources suffice; evaluate vLLM for capable GPU servers. Open-source agent frameworks do not remove hosted-model costs unless configured to use local inference. Document hardware/model-license constraints.
-- **Safety:** no automatic installs, unrestricted shell or broad browser permissions. Use explicit workspace roots, path containment, timeouts, output caps, least privilege and approval for consequential external actions.
-- **Complete when:** the chosen environment has verified probes, safe adapters, a repeatable baseline evaluation, measured comparisons, and unit/integration/security tests. A literature survey or static check alone does not prove runtime improvement.
-- **Current state:** capability inventory and bounded version probes are implemented; an initial research catalog now maps empirical findings to broad candidate options. Browser execution adapters, local-inference setup, sandbox adapters and task-level comparisons are not yet implemented or verified.
+- **Outcome:** make each route choice explainable and verifiable.
+- **Required report fields:** task, selected route/command, fallback identity, compatibility level, whether installation occurred (false by default), exit status and observed output where available.
+- **Checks:** do not treat PATH presence or configuration entries as proof of successful execution. Keep route selection separate from task success; verify outputs/postconditions after execution.
+- **Safety:** no arbitrary shell construction, no automatic retries after uncertain side effects, bounded timeouts/output where subprocesses are used, and explicit approval for consequential external operations.
+
+## P3 — Maintain existing AgentKit utilities and project-specific validation
+
+- Preserve the existing environment inventory, TypeScript compile helper, provenance ledger, archive/add-on audit, mobile preflight, and task-specific command resolver.
+- Add regression tests for path containment, malformed config, unknown commands, timeouts, output limits, and fallback compatibility as those code paths are changed.
+- Keep static preflight distinct from runtime validation; never claim device or remote MCP behavior from static configuration alone.
+
+## Out of scope for AgentKit
+
+- Browser automation frameworks and adapters, including Playwright.
+- Local LLM installation, model serving and model-performance evaluation.
+- These may be handled as separate projects, but they are not AgentKit tasks and are not part of this plan.
+
+## Current state
+
+- **Implemented in source:** initial environment discovery, task-specific resolver and Python substitutes, provenance records, TypeScript compile helper, add-on audit and mobile compatibility preflight.
+- **New source added in this work:** local MCP config inventory, Ruff-aware wrapper with reduced standard-library fallback, and an automatic route selector.
+- **Validation status:** implementation must be checked by the current GitHub Actions run before being described as CI-verified. Local config discovery does not verify GPT-hosted MCP connection state.
