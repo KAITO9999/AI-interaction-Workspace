@@ -131,6 +131,39 @@ def strip_json_comments(raw: str) -> str:
         else:
             output.append(char)
             index += 1
+    comment_free = "".join(output)
+    output = []
+    index = 0
+    in_string = False
+    escaped = False
+    while index < len(comment_free):
+        char = comment_free[index]
+        if in_string:
+            output.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            index += 1
+            continue
+        if char == '"':
+            in_string = True
+            output.append(char)
+            index += 1
+        elif char == ",":
+            lookahead = index + 1
+            while lookahead < len(comment_free) and comment_free[lookahead].isspace():
+                lookahead += 1
+            if lookahead < len(comment_free) and comment_free[lookahead] in "}]":
+                index += 1
+            else:
+                output.append(char)
+                index += 1
+        else:
+            output.append(char)
+            index += 1
     return "".join(output)
 
 
