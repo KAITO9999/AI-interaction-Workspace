@@ -1,6 +1,6 @@
 # AgentKit — cache
 
-Status: MCP discovery, route selection and Ruff fallback CI passed on 2026-10-21; GPT-hosted MCP connectivity remains outside local-file detection. Smartphone profile implementation and CI validation passed; Android runtime validation pending.
+Status: MCP discovery, route selection and Ruff fallback CI passed on 2026-10-21 (final verified run 39521144176); GPT-hosted MCP connectivity remains outside local-file detection. Smartphone profile implementation and CI validation passed; Android runtime validation pending.
 Last reviewed: 2026-10-21
 
 ## Verified source facts
@@ -40,4 +40,4 @@ Last reviewed: 2026-10-21
 - **Scope decision:** Playwright/browser automation and local LLM installation/serving are excluded from AgentKit's plan.
 - **Official Ruff references:** https://github.com/astral-sh/ruff and https://github.com/astral-sh/ruff/blob/main/docs/configuration.md.
 
-- **CI evidence:** [AgentKit checks run 39520945738](https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/39520945738) — source compilation, shell syntax, complete AgentKit test suite, change-ledger provenance and Markdown link checks all passed.
+- **CI evidence:** [AgentKit checks run 39520945738](https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/39521144176) — source compilation, shell syntax, complete AgentKit test suite, change-ledger provenance and Markdown link checks all passed.
