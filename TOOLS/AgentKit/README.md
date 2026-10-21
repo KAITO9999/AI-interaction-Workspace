@@ -56,6 +56,37 @@ Never record raw prompts, conversations, access tokens, private URLs or personal
 
 The audit checks ZIP CRC and member paths, parses JSON, compares BP/RP manifest versions and dependencies, and uses Node --check on JavaScript when Node is present. It does not extract the archive, validate every Minecraft schema or prove runtime behavior. In-world and Content Log checks remain separate.
 
+### 6. Automatic execution route selection
+
+    python3 TOOLS/AgentKit/agentkit_routes.py python-lint path/to/code
+    python3 TOOLS/AgentKit/agentkit_routes.py python-lint path/to/code --format json
+    python3 TOOLS/AgentKit/agentkit_routes.py python-lint path/to/code --force-fallback
+    python3 TOOLS/AgentKit/agentkit_routes.py json-check path/to/data.json --plan
+    python3 TOOLS/AgentKit/agentkit_routes.py search path/to/project --pattern TODO
+    python3 TOOLS/AgentKit/agentkit_routes.py mcp-inventory --root path/to/project --format json
+
+The route selector prefers the first available allowlisted command and otherwise uses an AgentKit fallback. `--plan` reports the selected route without executing the task. It does not install packages automatically. When a fallback is used, the CLI prints:
+
+    注意、代替コマンドな為既存とは動作が異なります。
+
+### 7. Ruff route and reduced Python fallback
+
+    python3 TOOLS/AgentKit/agentkit_ruff.py check path/to/code
+    python3 TOOLS/AgentKit/agentkit_ruff.py check path/to/file.py --format json
+    python3 TOOLS/AgentKit/agentkit_ruff.py check path/to/file.py --force-fallback
+    python3 TOOLS/AgentKit/agentkit_ruff.py format path/to/file.py --check
+
+If official `ruff` is on PATH, the wrapper delegates to it. Otherwise, the standard-library fallback reports syntax/parse errors (E999) and a conservative subset of unused imports (F401). It is **not Ruff-compatible**, does not implement Ruff configuration, auto-fixes, all lint rules, or formatting. It never rewrites source. The fallback's formatter command exits with status 3 and explains that real Ruff is required for formatting. Do not report a clean fallback run as equivalent to a full Ruff run.
+
+### 8. Local MCP configuration discovery
+
+    python3 TOOLS/AgentKit/agentkit_mcp.py --root .
+    python3 TOOLS/AgentKit/agentkit_mcp.py --root . --format json
+    python3 TOOLS/AgentKit/agentkit_mcp.py --home /path/to/home --root /path/to/project
+    python3 TOOLS/AgentKit/agentkit_mcp.py --config /explicit/path/to/mcp.json --format json
+
+The detector checks known local config locations for Claude Desktop/Code, Cursor, VS Code and Codex, plus explicitly supplied files. It reports server names, transport, command basename, host and environment-variable names only; it does not emit argument values, environment values, URL paths or query strings. It does not read conversation history, credential stores, shell history or arbitrary home-directory files. A config entry does not prove that a server is running, reachable, authenticated or usable. GPT-hosted MCP connections cannot be observed from this Linux process; those must be inspected through the host's available tool/connection metadata.
+
 ## Security and limitations
 
 - No privilege escalation, restriction bypass or credential discovery. Package installation is opt-in only through the resolver's explicit `--install` flag.
