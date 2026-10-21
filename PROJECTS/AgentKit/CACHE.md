@@ -29,3 +29,13 @@ Last reviewed: 2026-10-21
 - **Near-unlimited interpretation:** local inference avoids per-token hosted-model fees but remains bounded by hardware, energy, speed, context, model license and model capability. Open-source tools connected to a paid/limited API are not near-unlimited in this sense.
 - **Full sources:** see [AGENT_CAPABILITY_TOOLS.md](../../TOOLS/AgentKit/AGENT_CAPABILITY_TOOLS.md).
 - **Limitations:** no candidate was installed or run as part of this research pass. Availability, security, hardware fit and end-to-end improvement remain UNKNOWN pending probes and fixed-task evaluation.
+
+
+## MCP discovery and route selection — 2026-10-21
+
+- **Implementation added, verification pending:** `agentkit_mcp.py` checks known local MCP configuration locations and explicitly supplied files. It emits server names, transport, command basename, host and environment-variable names, but not secret values, server args or URL paths/query strings.
+- **Boundary:** local config presence does not establish server reachability/authentication and cannot reveal MCP connections managed by the hosted GPT process.
+- **Implementation added, verification pending:** `agentkit_routes.py` selects an available command from an ordered allowlist or routes to an AgentKit fallback, without auto-installation.
+- **Implementation added, verification pending:** `agentkit_ruff.py` delegates to official Ruff when found; otherwise it reports E999 and a conservative F401 subset. It is not Ruff-compatible and does not format or rewrite files.
+- **Scope decision:** Playwright/browser automation and local LLM installation/serving are excluded from AgentKit's plan.
+- **Official Ruff references:** https://github.com/astral-sh/ruff and https://github.com/astral-sh/ruff/blob/main/docs/configuration.md.
