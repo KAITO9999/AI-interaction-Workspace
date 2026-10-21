@@ -15,29 +15,34 @@ HERE = Path(__file__).resolve().parent
 TASKS: dict[str, dict[str, Any]] = {
     "python-lint": {"preferred": "ruff", "fallback": "agentkit_ruff.py", "kind": "python"},
     "mcp-inventory": {"preferred": None, "fallback": "agentkit_mcp.py", "kind": "python"},
-    "json-check": {"preferred": "jq", "fallback": "agentkit_resolve.py", "kind": "resolver"},
-    "search": {"preferred": "rg", "fallback": "agentkit_resolve.py", "kind": "resolver"},
-    "find-files": {"preferred": "fd", "fallback": "agentkit_resolve.py", "kind": "resolver"},
-    "archive-list": {"preferred": "7z", "fallback": "agentkit_resolve.py", "kind": "resolver"},
-    "sha256": {"preferred": "sha256sum", "fallback": "agentkit_resolve.py", "kind": "resolver"},
+    "json-check": {"preferred": ["jq"], "fallback": "agentkit_resolve.py", "kind": "resolver"},
+    "search": {"preferred": ["rg", "grep"], "fallback": "agentkit_resolve.py", "kind": "resolver"},
+    "find-files": {"preferred": ["fd", "find"], "fallback": "agentkit_resolve.py", "kind": "resolver"},
+    "archive-list": {"preferred": ["7z", "unzip", "tar"], "fallback": "agentkit_resolve.py", "kind": "resolver"},
+    "sha256": {"preferred": ["sha256sum", "shasum"], "fallback": "agentkit_resolve.py", "kind": "resolver"},
 }
 
 
 def plan(task: str, force_fallback: bool = False) -> dict[str, Any]:
     spec = TASKS[task]
-    command = spec["preferred"]
-    path = shutil.which(command) if command else None
-    if path and not force_fallback:
+    commands = spec["preferred"]
+    if isinstance(commands, str):
+        commands = [commands]
+    found = [(name, shutil.which(name)) for name in commands if name and shutil.which(name)]
+    if found and not force_fallback:
+        selected_name, selected_path = found[0]
         route = "direct"
-        selected = path
-        compatibility = "native command; exact behavior depends on its own CLI"
+        selected = selected_path
+        compatibility = "native command selected by ordered availability; behavior depends on the command and arguments"
     else:
+        selected_name = None
         route = "agentkit_fallback"
         selected = str(HERE / spec["fallback"])
         compatibility = "task-specific reduced alternative; not a drop-in replacement"
     return {
         "schema_version": 1, "agentkit_routes_version": VERSION, "task": task,
-        "route": route, "selected": selected, "preferred_command": command,
+        "route": route, "selected": selected, "selected_command": selected_name,
+        "preferred_commands": commands, "available_commands": [{"command": n, "path": p} for n, p in found],
         "fallback": str(HERE / spec["fallback"]), "compatibility": compatibility,
         "automatic_install": False,
         "limitations": ["PATH presence is not proof of successful execution.", "MCP inventory reports local config only, not GPT-hosted connections."],
