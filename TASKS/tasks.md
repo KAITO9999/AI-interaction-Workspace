@@ -51,10 +51,10 @@
 - [x] Add unit tests for no-execution discovery, fixed argv, timeout handling, bounded output and report provenance.
 - [x] Review primary research on tool use, program execution, test-time search, retrieval, reflection and multi-agent coordination; record experimental findings and limitations.
 - [x] Catalog open-source/local candidates and distinguish local/self-hosted use from API-backed fees and quotas.
-- [ ] Implement and test local MCP config discovery for Claude Desktop/Code, Cursor, VS Code and Codex, including explicit config paths, malformed files, transport detection and secret redaction.
-- [ ] Implement and test automatic route selection across direct commands and AgentKit fallbacks, with accurate route reports, no automatic installation and explicit compatibility warnings.
-- [ ] Implement and test a Ruff-aware Python lint route: prefer official Ruff, otherwise use a clearly labeled reduced standard-library fallback; never claim full Ruff compatibility.
-- [ ] Keep unsupported formatting explicit when Ruff is unavailable; do not rewrite source with an unsafe pseudo-formatter.
+- [x] Implement and test local MCP config discovery for Claude Desktop/Code, Cursor, VS Code, Codex, Windsurf, Cline, Roo Code and Continue, including explicit config paths, JSONC/TOML parsing, transport detection and secret redaction.
+- [x] Implement and test automatic route selection across direct commands and AgentKit fallbacks, with accurate route reports, no automatic installation and explicit compatibility warnings.
+- [x] Implement and test a Ruff-aware Python lint route: prefer official Ruff, otherwise use a clearly labeled reduced standard-library fallback; never claim full Ruff compatibility.
+- [x] Keep unsupported formatting explicit when Ruff is unavailable; do not rewrite source with an unsafe pseudo-formatter.
 - [ ] Add route-level result receipts and postcondition verification for selected command, exit status, output and artifacts.
 - [ ] Add security/fault-injection tests for path traversal, malformed MCP configuration, secret redaction, unknown commands, output flooding, timeouts and uncertain external side effects.
 - [ ] Compare direct and fallback routes on fixed representative tasks, recording compatibility gaps and failure classes.
