@@ -1,6 +1,6 @@
 # AgentKit — editing / handoff
 
-Current status: implementation is on branch `work/agentkit-mobile-profiles`; GitHub Actions passed; PR #13 is open. Real Android runtime testing remains pending.
+Current status: new MCP discovery, Ruff fallback and route-selector implementation is being validated on branch `work/executor-plus-long-work-mode`. Prior mobile-profile work remains on branch `work/agentkit-mobile-profiles`; PR #13 and its device-runtime validation are separate.
 
 ## Active work
 
@@ -30,3 +30,16 @@ Current status: implementation is on branch `work/agentkit-mobile-profiles`; Git
 - **No-install constraint:** no external packages, model weights or browser runtime were installed by this research pass.
 - **Evidence classification:** FACT — linked papers and project pages report the summarized findings/features. INTERPRETATION — integration priorities are synthesized across task categories. UNKNOWN — target machine suitability, local-model capability, runtime availability, security posture and task-level gains.
 - **Next action:** extend the inventory to detect local model runtimes and browser/MCP setup without reading secrets; then choose an approved hardware profile and run a fixed baseline/candidate task set.
+
+
+## AK-ROUTE-MCP-001 — Ruff fallback, automatic route selection and MCP detection
+
+- **Status:** source and initial tests added; CI/runtime verification pending.
+- **Actor:** AI.
+- **Work mode:** online (official Ruff docs and GitHub source reviewed; GitHub connector used for repository reads/writes).
+- **Scope:** implement an honest, reduced Python lint fallback; select direct commands or AgentKit fallback routes; inspect known local MCP config paths without exposing secrets.
+- **Files:** `TOOLS/AgentKit/agentkit_ruff.py`, `TOOLS/AgentKit/agentkit_mcp.py`, `TOOLS/AgentKit/agentkit_routes.py`, corresponding tests, README/AI_USAGE, plan/task/cache and workflow.
+- **Ruff source reference:** https://github.com/astral-sh/ruff and https://github.com/astral-sh/ruff/blob/main/docs/configuration.md. Fallback currently covers syntax/parse errors (E999) and conservative unused-import checks (F401) only; formatting is explicitly unsupported without official Ruff.
+- **MCP boundary:** detector inspects known local config paths and explicit config files only. It redacts server argument values, environment values and URL paths/query strings. It cannot observe GPT-hosted MCP connections.
+- **Out of scope:** Playwright/browser automation and local LLM setup/serving are not AgentKit deliverables.
+- **Next action:** run focused tests and full CI; fix failures before marking tasks complete. Then inspect the CI result and distinguish local config discovery from actual server connectivity.
