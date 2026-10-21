@@ -92,13 +92,55 @@ def server_records(data: dict[str, Any], source: Path) -> list[dict[str, Any]]:
     return records
 
 
+def strip_json_comments(raw: str) -> str:
+    """Remove JSONC // and /* */ comments without changing quoted strings."""
+    output: list[str] = []
+    index = 0
+    in_string = False
+    escaped = False
+    while index < len(raw):
+        char = raw[index]
+        nxt = raw[index + 1] if index + 1 < len(raw) else ""
+        if in_string:
+            output.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            index += 1
+            continue
+        if char == '"':
+            in_string = True
+            output.append(char)
+            index += 1
+        elif char == "/" and nxt == "/":
+            while index < len(raw) and raw[index] not in "\r\n":
+                output.append(" ")
+                index += 1
+        elif char == "/" and nxt == "*":
+            output.extend([" ", " "])
+            index += 2
+            while index < len(raw) and raw[index:index + 2] != "*/":
+                output.append("\n" if raw[index] == "\n" else " ")
+                index += 1
+            if index < len(raw):
+                output.extend([" ", " "])
+                index += 2
+        else:
+            output.append(char)
+            index += 1
+    return "".join(output)
+
+
 def inspect_config(path: Path) -> tuple[list[dict[str, Any]], dict[str, str] | None]:
     try:
         raw = path.read_text(encoding="utf-8")
         if path.suffix.lower() == ".toml":
             data = tomllib.loads(raw)
         else:
-            data = json.loads(raw)
+            data = json.loads(strip_json_comments(raw))
         if not isinstance(data, dict):
             return [], {"path": str(path), "error": "top_level_value_is_not_an_object"}
         return server_records(data, path), None
