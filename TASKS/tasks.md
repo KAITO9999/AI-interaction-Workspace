@@ -51,17 +51,13 @@
 - [x] Add unit tests for no-execution discovery, fixed argv, timeout handling, bounded output and report provenance.
 - [x] Review primary research on tool use, program execution, test-time search, retrieval, reflection and multi-agent coordination; record experimental findings and limitations.
 - [x] Catalog open-source/local candidates and distinguish local/self-hosted use from API-backed fees and quotas.
-- [ ] Expand discovery to verify browser binaries, MCP configuration, local model runtimes/endpoints and more language-specific test runners without exposing secrets.
-- [ ] Collect an approved hardware/runtime profile and compare local inference paths (Ollama vs llama.cpp; vLLM only where appropriate) without automatic installation.
-- [ ] Add a Playwright adapter for approved browser exploration, screenshots/traces and repeatable UI regression tests; keep consequential actions approval-gated.
-- [ ] Add a workspace-scoped execution/patch adapter with path containment, command policy, timeout/output limits, postcondition checks and provenance records.
-- [ ] Add a deterministic evaluation/result schema mapping acceptance criteria to test IDs, expected/actual results, artifacts and limitations.
-- [ ] Add a bounded adaptive repair/search loop that escalates only after objective failure and selects candidates using tests/validators.
-- [ ] Add versioned local checkpoint/memory records and resume/re-observation behavior for interrupted tasks.
-- [ ] Evaluate local exact search/repository maps first; add a local vector/RAG index only if retrieval recall tests show a material gap.
-- [ ] Add optional separately named reviewer routing for independent work or a genuinely distinct second model; findings remain advisory and evidence-checked.
-- [ ] Add security/fault-injection tests for prompt injection, path traversal, unknown tools, output flooding, timeouts, interrupted operations and uncertain external side effects.
-- [ ] Compare baseline and candidate toolchains on fixed tasks using the same model/context/compute budget where practical; report pass rate, latency, call count, failure class and environment evidence.
+- [ ] Implement and test local MCP config discovery for Claude Desktop/Code, Cursor, VS Code and Codex, including explicit config paths, malformed files, transport detection and secret redaction.
+- [ ] Implement and test automatic route selection across direct commands and AgentKit fallbacks, with accurate route reports, no automatic installation and explicit compatibility warnings.
+- [ ] Implement and test a Ruff-aware Python lint route: prefer official Ruff, otherwise use a clearly labeled reduced standard-library fallback; never claim full Ruff compatibility.
+- [ ] Keep unsupported formatting explicit when Ruff is unavailable; do not rewrite source with an unsafe pseudo-formatter.
+- [ ] Add route-level result receipts and postcondition verification for selected command, exit status, output and artifacts.
+- [ ] Add security/fault-injection tests for path traversal, malformed MCP configuration, secret redaction, unknown commands, output flooding, timeouts and uncertain external side effects.
+- [ ] Compare direct and fallback routes on fixed representative tasks, recording compatibility gaps and failure classes.
 
 ## ReForge Visuals
 
