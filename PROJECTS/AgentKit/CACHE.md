@@ -1,6 +1,6 @@
 # AgentKit — cache
 
-Status: smartphone profile preflight implementation and CI validation passed; Android runtime validation pending.
+Status: MCP discovery, route selection and Ruff fallback CI passed on 2026-10-21; GPT-hosted MCP connectivity remains outside local-file detection. Smartphone profile implementation and CI validation passed; Android runtime validation pending.
 Last reviewed: 2026-10-21
 
 ## Verified source facts
@@ -33,9 +33,11 @@ Last reviewed: 2026-10-21
 
 ## MCP discovery and route selection — 2026-10-21
 
-- **Implementation added, verification pending:** `agentkit_mcp.py` checks known local MCP configuration locations and explicitly supplied files. It emits server names, transport, command basename, host and environment-variable names, but not secret values, server args or URL paths/query strings.
+- **Implementation:** `agentkit_mcp.py` checks known local MCP configuration locations and explicitly supplied files. It emits server names, transport, command basename, host and environment-variable names, but not secret values, server args or URL paths/query strings.
 - **Boundary:** local config presence does not establish server reachability/authentication and cannot reveal MCP connections managed by the hosted GPT process.
 - **Implementation added, verification pending:** `agentkit_routes.py` selects an available command from an ordered allowlist or routes to an AgentKit fallback, without auto-installation.
 - **Implementation added, verification pending:** `agentkit_ruff.py` delegates to official Ruff when found; otherwise it reports E999 and a conservative F401 subset. It is not Ruff-compatible and does not format or rewrite files.
 - **Scope decision:** Playwright/browser automation and local LLM installation/serving are excluded from AgentKit's plan.
 - **Official Ruff references:** https://github.com/astral-sh/ruff and https://github.com/astral-sh/ruff/blob/main/docs/configuration.md.
+
+- **CI evidence:** [AgentKit checks run 39520945738](https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/39520945738) — source compilation, shell syntax, complete AgentKit test suite, change-ledger provenance and Markdown link checks all passed.
