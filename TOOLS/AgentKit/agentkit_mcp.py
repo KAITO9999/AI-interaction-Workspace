@@ -21,21 +21,32 @@ VERSION = "0.1.0"
 
 
 def candidates(home: Path, root: Path) -> list[Path]:
+    xdg_config = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))).expanduser()
     values = [
         home / ".claude.json",
         home / ".claude" / "settings.json",
         home / ".cursor" / "mcp.json",
+        home / ".codeium" / "windsurf" / "mcp_config.json",
+        home / ".cline" / "mcp_settings.json",
+        home / ".roo" / "mcp.json",
         home / ".config" / "Claude" / "claude_desktop_config.json",
         home / ".config" / "claude" / "claude_desktop_config.json",
+        xdg_config / "Claude" / "claude_desktop_config.json",
         home / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json",
         home / ".codex" / "config.toml",
         home / ".config" / "Code" / "User" / "mcp.json",
         root / ".mcp.json",
         root / ".cursor" / "mcp.json",
         root / ".vscode" / "mcp.json",
+        root / ".windsurf" / "mcp_config.json",
+        root / ".cline" / "mcp_settings.json",
+        root / ".roo" / "mcp.json",
         root / ".claude" / "settings.json",
         root / ".codex" / "config.toml",
     ]
+    continue_dir = home / ".continue" / "mcpServers"
+    if continue_dir.is_dir():
+        values.extend(sorted(continue_dir.glob("*.json")))
     return list(dict.fromkeys(path.resolve() for path in values))
 
 
@@ -60,7 +71,11 @@ def server_records(data: dict[str, Any], source: Path) -> list[dict[str, Any]]:
         env = config.get("env")
         if isinstance(url, str):
             parsed = urlsplit(url)
-            transport = "http" if parsed.scheme in {"http", "https"} else "url"
+            configured_type = str(config.get("type", "")).casefold()
+            if configured_type in {"sse", "http", "streamable-http", "streamable_http"}:
+                transport = "sse" if configured_type == "sse" else "http"
+            else:
+                transport = "http" if parsed.scheme in {"http", "https"} else "url"
             host = parsed.hostname
             records.append({
                 "name": name, "config_path": str(source), "transport": transport,
