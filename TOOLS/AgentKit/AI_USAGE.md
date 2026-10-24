@@ -69,3 +69,5 @@ These are reference candidates, not vendored dependencies. Check the current rep
 - Use `sqlite-inspect` only with an explicit database path; it opens the DB read-only and does not accept arbitrary SQL.
 - Use `artifact-inspect` for bounded magic-byte and SHA-256 reports. A magic-byte guess is not proof of safety or runtime compatibility.
 - Treat JSON reports as evidence with explicit limits, not proof beyond the checks named. Keep separate checks running when one unrelated check fails; do not convert unavailable checks into PASS.
+
+- For concurrent editing and verification, run `python3 TOOLS/AgentKit/agentkit_watch.py --root <root> --watch <source-dir> --watch <test-dir> -- python3 -m unittest discover -s <test-dir> -v` in a separate terminal. The watcher uses content hashes, a debounce interval and bounded runs/timeouts; it does not execute a shell command string. Choose explicit watch roots and an explicit test command.
