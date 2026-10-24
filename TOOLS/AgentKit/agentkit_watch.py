@@ -27,14 +27,17 @@ def snapshot(root: Path, watched: list[str]) -> tuple[str, dict[str, str], dict[
     files: list[Path] = []
     warnings: dict[str, str] = {}
     for raw in watched:
-        path = (root / raw).resolve()
+        lexical_path = Path(raw).expanduser()
+        if not lexical_path.is_absolute():
+            lexical_path = root / lexical_path
+        if lexical_path.is_symlink():
+            warnings[raw] = "symlink roots are skipped"
+            continue
+        path = lexical_path.resolve()
         try:
             path.relative_to(root)
         except ValueError:
             warnings[raw] = "path escapes root"
-            continue
-        if path.is_symlink():
-            warnings[raw] = "symlink roots are skipped"
             continue
         if path.is_file():
             files.append(path)
@@ -125,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(args.root).expanduser().resolve()
     if not root.is_dir():
         parser.error(f"root is not a directory: {root}")
-    baseline, _, warnings = snapshot(root, args.watch)
+    baseline, baseline_files, warnings = snapshot(root, args.watch)
     if not baseline:
         parser.error("initial snapshot failed: " + "; ".join(warnings.values()))
     events: list[dict[str, object]] = []
@@ -139,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         while runs < args.max_runs:
             time.sleep(args.interval)
-            current, _, current_warnings = snapshot(root, args.watch)
+            current, current_files, current_warnings = snapshot(root, args.watch)
             if current_warnings:
                 warnings.update(current_warnings)
             if not current:
@@ -147,14 +150,18 @@ def main(argv: list[str] | None = None) -> int:
             if current == baseline:
                 continue
             time.sleep(args.debounce)
-            settled, files, settled_warnings = snapshot(root, args.watch)
+            settled, settled_files, settled_warnings = snapshot(root, args.watch)
             warnings.update(settled_warnings)
             if not settled:
                 continue
-            baseline = settled
+            changed_files = sorted(
+                name for name in set(baseline_files) | set(settled_files)
+                if baseline_files.get(name) != settled_files.get(name)
+            )
+            baseline, baseline_files = settled, settled_files
             runs += 1
             report = run_check(command, root, args.timeout)
-            event = {"event": "change", "run": runs, "changed_files": sorted(files), **report}
+            event = {"event": "change", "run": runs, "changed_files": changed_files, **report}
             events.append(event)
             print(json.dumps(event, ensure_ascii=False) if args.json else
                   f"[{report['status']}] change-triggered verification #{runs} ({report['duration_seconds']}s)")
