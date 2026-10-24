@@ -34,7 +34,7 @@ The profile preflight does not emulate devices, install packages, run the app, o
 **Procedure:**
 1. Verify upstream command behavior and invoke the official command when present.
 2. Use Python standard-library implementations only where they can safely provide the named behavior; otherwise report unavailable.
-3. Make weaker fallbacks explicit in machine-readable output (for example, `py_compile` is syntax-only, not Ruff; `sh -n` is syntax-only, not ShellCheck).
+3. Make weaker fallbacks explicit in machine-readable output (for example, Python `compile()` is syntax-only, not Ruff; `sh -n` is syntax-only, not ShellCheck).
 4. Apply strict path containment, bounded reads/output, timeouts, and read-only defaults. Avoid arbitrary SQL, shell interpolation, automatic installs, and file execution.
 5. Add boundary tests for path traversal, symlinks, byte/line budgets, invalid inputs, missing tools, and read-only behavior.
 6. Keep existing core/extension commands separate unless a later measured change proves consolidation improves compatibility without breaking the CLI.
