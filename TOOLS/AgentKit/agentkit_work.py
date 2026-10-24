@@ -414,5 +414,18 @@ def build_parser() -> argparse.ArgumentParser:
     return 1 if report.get("errors") or any(c.get("status") == "FAIL" for c in report.get("checks", [])) else 0
 
 
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if not 1 <= getattr(args, "timeout", 30) <= 600:
+        parser.error("--timeout must be in range 1..600")
+    try:
+        report = args.handler(args)
+    except KeyboardInterrupt:
+        report = {"summary": "Interrupted; no automatic retry", "checks": [], "errors": ["interrupted"]}
+    emit(report, args.json)
+    return 1 if report.get("errors") or any(c.get("status") == "FAIL" for c in report.get("checks", [])) else 0
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
