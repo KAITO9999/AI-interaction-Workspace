@@ -264,8 +264,17 @@ def artifact_inspect(paths: list[str], max_bytes: int) -> dict[str, Any]:
                                 "detail": "hash is partial and intentionally omitted"})
                 continue
             kind = next((label for signature, label in MAGIC if first.startswith(signature)), "unknown / not in magic allowlist")
+            file_cmd = shutil.which("file")
+            file_description = None
+            type_source = "python-magic-allowlist"
+            if file_cmd:
+                file_result = run_argv([file_cmd, "--brief", "--", str(path)], timeout=10)
+                if file_result["returncode"] == 0:
+                    file_description = file_result["stdout"].strip()[:1000]
+                    type_source = "file"
             reports.append({"path": str(path.resolve()), "size_bytes": stat.st_size,
                             "sha256": digest.hexdigest(), "magic_type": kind,
+                            "file_description": file_description, "type_source": type_source,
                             "extension": path.suffix.lower(), "extension_matches_magic": _extension_hint(path.suffix.lower(), kind)})
         except OSError as exc:
             errors.append(f"{path}: {type(exc).__name__}: {exc}")
@@ -289,6 +298,10 @@ def context_inspect(root: Path, target: str, start: int | None, end: int | None,
         return {"summary": "Context inspection failed", "matches": [], "errors": [f"root is not a directory: {root}"]}
     if max_lines < 1 or max_bytes < 1:
         return {"summary": "Context inspection rejected limits", "matches": [], "errors": ["limits must be positive"]}
+    if (start is not None and start < 1) or (end is not None and end < 1):
+        return {"summary": "Context inspection rejected line range", "matches": [], "errors": ["line numbers must be >= 1"]}
+    if start is not None and end is not None and start > end:
+        return {"summary": "Context inspection rejected line range", "matches": [], "errors": ["start must be <= end"]}
     target_path = (root / target).resolve()
     try:
         target_path.relative_to(root)
@@ -324,8 +337,14 @@ def context_inspect(root: Path, target: str, start: int | None, end: int | None,
             if size > max_bytes - bytes_seen:
                 truncated = True
                 break
-            content = path.read_text(encoding="utf-8", errors="replace")
-            bytes_seen += size
+            remaining = max_bytes - bytes_seen
+            with path.open("rb") as handle:
+                raw = handle.read(remaining + 1)
+            if len(raw) > remaining:
+                truncated = True
+                break
+            content = raw.decode("utf-8", errors="replace")
+            bytes_seen += len(raw)
         except OSError:
             continue
         lines = content.splitlines()
