@@ -75,7 +75,7 @@ def repo_check(root: Path, timeout: int) -> dict[str, Any]:
         return {"summary": "Repository check unavailable", "checks": [], "errors": [f"not a Git work tree: {root}"]}
     checks = []
     for name, args in (
-        ("status", ["status", "--short", "--branch", "--untracked-files=normal"]),
+        ("status", ["status", "--porcelain=v1", "--branch", "--untracked-files=normal"]),
         ("diff-check", ["diff", "--check"]),
         ("diff-staged-check", ["diff", "--cached", "--check"]),
         ("diff-stat", ["diff", "--stat"]),
