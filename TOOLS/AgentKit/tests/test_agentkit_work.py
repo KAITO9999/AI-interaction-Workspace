@@ -127,8 +127,8 @@ class AgentKitWorkTests(unittest.TestCase):
             path = Path(directory) / "x.sh"
             path.write_text("echo ok\n", encoding="utf-8")
             result = run("audit-shell", "--root", directory, "--dialect", "fish", "--json")
-            self.assertEqual(result.returncode, 1)
-            self.assertIn("dialect", json.loads(result.stdout)["errors"][0])
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("invalid choice", result.stderr)
 
     def test_repo_check_does_not_initialize_non_repository(self):
         with tempfile.TemporaryDirectory() as directory:
