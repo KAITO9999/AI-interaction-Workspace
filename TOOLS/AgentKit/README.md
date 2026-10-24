@@ -125,3 +125,13 @@ python3 TOOLS/AgentKit/agentkit_work.py context --root . --target TOOLS/AgentKit
 - `context` reads bounded line ranges or matching lines and emits machine-readable JSON when requested. It excludes dependency/build directories, rejects root escapes and skips symlinks during recursive scans. Default limits are 250 output lines and 1 MB of scanned file content.
 
 All external commands use argument arrays (no shell expansion), bounded timeouts, and bounded report excerpts. A fallback only provides the explicitly named subset; it is not a general reimplementation of the upstream command. Run the test suite with `python3 -m unittest discover -s TOOLS/AgentKit/tests -v`.
+
+## Keep verification running during edits
+
+`agentkit_watch.py` reruns an explicit verification command when watched files change. Run it in a separate terminal while editing:
+
+```sh
+python3 TOOLS/AgentKit/agentkit_watch.py --root . --watch TOOLS/AgentKit --watch tests --max-runs 25 -- python3 -m unittest discover -s TOOLS/AgentKit/tests -v
+```
+
+The watcher performs one initial run unless `--no-initial-run` is supplied, then polls file content hashes and reruns after a quiet/debounce period. It uses an argument vector without shell evaluation, bounds polling interval, command timeout, number of runs, watched file count, total scanned bytes, and captured output. Default limit is 25 runs. Stop it with Ctrl-C. Its exit status reflects the verification runs and scan warnings; a clean watcher exit does not prove runtime behavior beyond the supplied command.
