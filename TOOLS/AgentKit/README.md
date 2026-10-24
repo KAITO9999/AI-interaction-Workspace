@@ -135,3 +135,13 @@ python3 TOOLS/AgentKit/agentkit_watch.py --root . --watch TOOLS/AgentKit --max-r
 ```
 
 The watcher performs one initial run unless `--no-initial-run` is supplied, then polls file content hashes and reruns after a quiet/debounce period. It uses an argument vector without shell evaluation, bounds polling interval, command timeout, number of runs, watched file count, total scanned bytes, and captured output. Default limit is 25 runs. Stop it with Ctrl-C. Its exit status reflects the verification runs and scan warnings; a clean watcher exit does not prove runtime behavior beyond the supplied command.
+
+## Upstream behavior references
+
+The wrappers intentionally invoke the upstream command rather than reimplementing its full behavior. Recheck these references when changing arguments or fallback claims:
+
+- [Git `status`](https://git-scm.com/docs/git-status) and [Git `diff`](https://git-scm.com/docs/git-diff): repository state, staged/unstaged differences, whitespace checks and stable porcelain output.
+- [Ruff `check`](https://docs.astral.sh/ruff/configuration/): actual linting behavior and supported output formats. The Python `compile()` fallback only checks syntax.
+- [ShellCheck](https://github.com/koalaman/shellcheck): shell static analysis. `sh -n`/`bash -n` only check syntax.
+- [Python `sqlite3`](https://docs.python.org/3/library/sqlite3.html) and [SQLite URI filenames](https://www.sqlite.org/uri.html): read-only `mode=ro` behavior.
+- [`file(1)` manual](https://man7.org/linux/man-pages/man1/file.1.html): upstream file-type description. The Python magic-byte allowlist is deliberately incomplete.
