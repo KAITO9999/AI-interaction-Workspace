@@ -154,6 +154,7 @@ def main(argv: list[str] | None = None) -> int:
             current, current_files, current_warnings = snapshot(root, args.watch)
             if current_warnings:
                 warnings.update(current_warnings)
+                break
             if not current:
                 break
             if current == baseline:
@@ -161,7 +162,7 @@ def main(argv: list[str] | None = None) -> int:
             time.sleep(args.debounce)
             settled, settled_files, settled_warnings = snapshot(root, args.watch)
             warnings.update(settled_warnings)
-            if not settled:
+            if settled_warnings or not settled:
                 break
             changed_files = sorted(
                 name for name in set(baseline_files) | set(settled_files)
