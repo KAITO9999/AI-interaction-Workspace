@@ -59,3 +59,15 @@ These are reference candidates, not vendored dependencies. Check the current rep
 - Installation is disabled unless `--install` is explicitly supplied; only fixed package mappings and supported package managers are allowed.
 - Never add automatic retries, shell interpolation, privilege escalation, or unreviewed arbitrary package names.
 - After an install attempt, verify the executable and rerun a bounded task-specific test. Report install success separately from task success.
+
+
+## Workflow checks and context budget
+
+- Use `python3 TOOLS/AgentKit/agentkit_work.py context --root <root> --target <path> --start <n> --end <n> --json` to retrieve only a line range, or `--pattern <text>` to return matching lines. Keep `--max-lines` and `--max-bytes` bounded; do not dump whole repositories/files when a focused range suffices.
+- Use `repo-check` for read-only Git status and staged/unstaged diff checks. If Git is missing or the target is not a worktree, treat that check as unavailable; never approximate Git semantics.
+- Use `lint-python` and `audit-shell` before claiming static validation. Record whether Ruff/ShellCheck ran or whether only syntax-level fallback checks were possible.
+- Use `sqlite-inspect` only with an explicit database path; it opens the DB read-only and does not accept arbitrary SQL.
+- Use `artifact-inspect` for bounded magic-byte and SHA-256 reports. A magic-byte guess is not proof of safety or runtime compatibility.
+- Treat JSON reports as evidence with explicit limits, not proof beyond the checks named. Keep separate checks running when one unrelated check fails; do not convert unavailable checks into PASS.
+
+- For concurrent editing and verification, run `python3 TOOLS/AgentKit/agentkit_watch.py --root <root> --watch <source-dir> --watch <test-dir> -- python3 -m unittest discover -s <test-dir> -v` in a separate terminal. The watcher uses content hashes, a debounce interval and bounded runs/timeouts; it does not execute a shell command string. Choose explicit watch roots and an explicit test command.

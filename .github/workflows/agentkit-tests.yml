@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile Python source
-        run: python -m py_compile TOOLS/AgentKit/agentkit.py TOOLS/AgentKit/agentkit_ext.py TOOLS/AgentKit/agentkit_resolve.py scripts/check_change_ledger.py
+        run: python -m py_compile TOOLS/AgentKit/agentkit.py TOOLS/AgentKit/agentkit_ext.py TOOLS/AgentKit/agentkit_resolve.py TOOLS/AgentKit/agentkit_work.py TOOLS/AgentKit/agentkit_watch.py scripts/check_change_ledger.py
       - name: Check POSIX shell syntax
         run: sh -n TOOLS/AgentKit/agentkit TOOLS/AgentKit/agentkit.sh
       - name: Run AgentKit tests
