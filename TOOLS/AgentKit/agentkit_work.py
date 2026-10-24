@@ -309,7 +309,13 @@ def context_inspect(root: Path, target: str, start: int | None, end: int | None,
     for path in candidates:
         try:
             rel = path.relative_to(root)
-        except ValueError:
+            # Do not follow symlinks during recursive context gathering: a link
+            # inside the selected root may disclose files outside that boundary.
+            if path.is_symlink():
+                continue
+            resolved = path.resolve()
+            resolved.relative_to(root)
+        except (ValueError, OSError):
             continue
         if any(part in SKIP_DIRS for part in rel.parts) or not path.is_file():
             continue
