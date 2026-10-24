@@ -131,7 +131,7 @@ All external commands use argument arrays (no shell expansion), bounded timeouts
 `agentkit_watch.py` reruns an explicit verification command when watched files change. Run it in a separate terminal while editing:
 
 ```sh
-python3 TOOLS/AgentKit/agentkit_watch.py --root . --watch TOOLS/AgentKit --watch tests --max-runs 25 -- python3 -m unittest discover -s TOOLS/AgentKit/tests -v
+python3 TOOLS/AgentKit/agentkit_watch.py --root . --watch TOOLS/AgentKit --max-runs 25 -- python3 -m unittest discover -s TOOLS/AgentKit/tests -v
 ```
 
 The watcher performs one initial run unless `--no-initial-run` is supplied, then polls file content hashes and reruns after a quiet/debounce period. It uses an argument vector without shell evaluation, bounds polling interval, command timeout, number of runs, watched file count, total scanned bytes, and captured output. Default limit is 25 runs. Stop it with Ctrl-C. Its exit status reflects the verification runs and scan warnings; a clean watcher exit does not prove runtime behavior beyond the supplied command.
