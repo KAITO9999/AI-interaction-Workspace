@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -136,6 +137,37 @@ class AgentKitWorkTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1)
             self.assertIn("not a Git work tree", json.loads(result.stdout)["errors"][0])
             self.assertFalse((Path(directory) / ".git").exists())
+
+
+    def test_context_rejects_invalid_line_ranges_and_enforces_byte_budget(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "a.txt").write_text("123456\nneedle\n", encoding="utf-8")
+            result = run("context", "--root", directory, "--start", "0", "--json")
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("line numbers", json.loads(result.stdout)["errors"][0])
+            result = run("context", "--root", directory, "--pattern", "needle", "--max-bytes", "3", "--json")
+            report = json.loads(result.stdout)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(report["matches"], [])
+            self.assertTrue(report["truncated"])
+
+    def test_repo_check_reports_real_git_status_without_mutating(self):
+        if not shutil.which("git"):
+            self.skipTest("git unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            init = subprocess.run(["git", "init", str(root)], capture_output=True, text=True, timeout=10)
+            if init.returncode:
+                self.skipTest("git init unavailable")
+            (root / "untracked.txt").write_text("x\n", encoding="utf-8")
+            result = run("repo-check", "--root", directory, "--json")
+            report = json.loads(result.stdout)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            status = next(item for item in report["checks"] if item["name"] == "status")
+            self.assertIn("untracked.txt", status["stdout"])
+            self.assertTrue(report["read_only"])
+            self.assertFalse((root / ".git" / "index").exists())
 
     def test_help_and_version_are_available(self):
         result = run("--help")
