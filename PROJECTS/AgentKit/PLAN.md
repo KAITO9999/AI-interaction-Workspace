@@ -14,3 +14,9 @@
 - **Prerequisite:** measured data from named device classes or a user-approved hardware matrix.
 - **Complete when:** every added parameter has a source or measurement and an explicit rationale; do not invent values to fill gaps.
 - **Current state:** RAM budgets are set to 4/8/12/16 GB; no other hardware parameters were found in the current AgentKit source to tune.
+## P3 — Expand Python-first workflow checks and context retrieval
+
+- **Outcome:** provide low-dependency, bounded checks for repository state, Python/shell source, SQLite databases, artifacts, and targeted context retrieval without duplicating existing AgentKit command roles.
+- **Implementation:** `TOOLS/AgentKit/agentkit_work.py` plus tests and CLI documentation.
+- **Acceptance:** official tools are preferred when present; weaker fallbacks are labeled accurately; path/symlink/output boundaries are tested; CI passes; real target-environment smoke tests are recorded separately.
+- **Current state:** implementation is on `work/agentkit-python-first-tooling`; hosted CI and deeper parity review are pending.
