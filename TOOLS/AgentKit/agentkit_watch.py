@@ -64,14 +64,23 @@ def snapshot(root: Path, watched: list[str]) -> tuple[str, dict[str, str], dict[
     for path in files:
         try:
             size = path.stat().st_size
-            total += size
-            if total > MAX_TOTAL_BYTES:
-                warnings["scan"] = f"byte limit exceeded ({total} > {MAX_TOTAL_BYTES}); snapshot rejected"
+            remaining = MAX_TOTAL_BYTES - total
+            if size > remaining:
+                warnings["scan"] = f"byte limit exceeded by {path.relative_to(root).as_posix()} ({size} > remaining {remaining}); snapshot rejected"
                 return "", {}, warnings
             digest = hashlib.sha256()
+            read_size = 0
             with path.open("rb") as handle:
-                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                while True:
+                    chunk = handle.read(min(1024 * 1024, remaining - read_size + 1))
+                    if not chunk:
+                        break
+                    read_size += len(chunk)
+                    if read_size > remaining:
+                        warnings["scan"] = "file grew beyond the byte budget while being scanned; snapshot rejected"
+                        return "", {}, warnings
                     digest.update(chunk)
+            total += read_size
             per_file[path.relative_to(root).as_posix()] = digest.hexdigest()
         except OSError as exc:
             warnings[path.relative_to(root).as_posix()] = f"{type(exc).__name__}: {exc}"
