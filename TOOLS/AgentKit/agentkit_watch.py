@@ -129,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
     if not root.is_dir():
         parser.error(f"root is not a directory: {root}")
     baseline, baseline_files, warnings = snapshot(root, args.watch)
-    if not baseline:
+    if not baseline or warnings:
         parser.error("initial snapshot failed: " + "; ".join(warnings.values()))
     events: list[dict[str, object]] = []
     runs = 0
