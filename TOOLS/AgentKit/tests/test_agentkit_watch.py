@@ -24,6 +24,7 @@ class AgentKitWatchTests(unittest.TestCase):
             self.assertEqual(events[0]["status"], "PASS")
             self.assertIn("verified", events[0]["stdout"])
             self.assertEqual(events[-1]["summary"], "watch stopped")
+            self.assertNotIn("stdout", events[-1]["events"][0])
 
     def test_nonzero_verification_is_reported_as_failure(self):
         with tempfile.TemporaryDirectory() as directory:
