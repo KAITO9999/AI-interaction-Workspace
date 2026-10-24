@@ -118,7 +118,7 @@ python3 TOOLS/AgentKit/agentkit_work.py context --root . --target TOOLS/AgentKit
 ```
 
 - `repo-check` invokes Git itself for status, staged/unstaged whitespace checks and summaries. If Git or a Git worktree is absent, it fails explicitly; it does not simulate Git.
-- `lint-python` uses `ruff check` when available; otherwise it uses `py_compile` and labels the result **syntax-only**, not lint-equivalent.
+- `lint-python` uses `ruff check` when available; otherwise it uses Python's built-in `compile()` without writing bytecode and labels the result **syntax-only**, not lint-equivalent.
 - `audit-shell` uses ShellCheck when available; otherwise it uses the explicitly selected `sh -n` or `bash -n` syntax checker. It never claims parity with ShellCheck.
 - `sqlite-inspect` uses Python's standard-library SQLite binding in read-only mode; arbitrary SQL is not accepted. Row counts and integrity checks are opt-in.
 - `artifact-inspect` computes SHA-256 and checks a small magic-byte allowlist within a byte budget; when the official `file` utility is available, it also records that utility's description. The Python magic list is only a fallback hint, not a full replacement for `file`. It never executes files; unknown file types remain unknown.
