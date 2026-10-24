@@ -155,14 +155,14 @@ def main(argv: list[str] | None = None) -> int:
             if current_warnings:
                 warnings.update(current_warnings)
             if not current:
-                continue
+                break
             if current == baseline:
                 continue
             time.sleep(args.debounce)
             settled, settled_files, settled_warnings = snapshot(root, args.watch)
             warnings.update(settled_warnings)
             if not settled:
-                continue
+                break
             changed_files = sorted(
                 name for name in set(baseline_files) | set(settled_files)
                 if baseline_files.get(name) != settled_files.get(name)
@@ -178,12 +178,16 @@ def main(argv: list[str] | None = None) -> int:
                 print(str(report["stderr"]))
     except KeyboardInterrupt:
         pass
-    summary = {"summary": "watch stopped", "runs": runs, "warnings": warnings, "events": events}
+    summary_events = [
+        {key: event[key] for key in ("event", "run", "status", "returncode", "duration_seconds", "timed_out", "changed_files") if key in event}
+        for event in events
+    ]
+    summary = {"summary": "watch stopped", "runs": runs, "warnings": warnings, "events": summary_events}
     if args.json:
         print(json.dumps(summary, ensure_ascii=False))
     else:
         print(f"Stopped after {runs} verification run(s).")
-    return 0 if all(e.get("status") == "PASS" for e in events) and not warnings else 1
+    return 0 if runs > 0 and all(e.get("status") == "PASS" for e in events) and not warnings else 1
 
 
 if __name__ == "__main__":
