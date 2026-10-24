@@ -121,7 +121,7 @@ python3 TOOLS/AgentKit/agentkit_work.py context --root . --target TOOLS/AgentKit
 - `lint-python` uses `ruff check` when available; otherwise it uses `py_compile` and labels the result **syntax-only**, not lint-equivalent.
 - `audit-shell` uses ShellCheck when available; otherwise it uses the explicitly selected `sh -n` or `bash -n` syntax checker. It never claims parity with ShellCheck.
 - `sqlite-inspect` uses Python's standard-library SQLite binding in read-only mode; arbitrary SQL is not accepted. Row counts and integrity checks are opt-in.
-- `artifact-inspect` computes SHA-256 and checks a small magic-byte allowlist within a byte budget. It never executes files; unknown file types remain unknown.
+- `artifact-inspect` computes SHA-256 and checks a small magic-byte allowlist within a byte budget; when the official `file` utility is available, it also records that utility's description. The Python magic list is only a fallback hint, not a full replacement for `file`. It never executes files; unknown file types remain unknown.
 - `context` reads bounded line ranges or matching lines and emits machine-readable JSON when requested. It excludes dependency/build directories, rejects root escapes and skips symlinks during recursive scans. Default limits are 250 output lines and 1 MB of scanned file content.
 
 All external commands use argument arrays (no shell expansion), bounded timeouts, and bounded report excerpts. A fallback only provides the explicitly named subset; it is not a general reimplementation of the upstream command. Run the test suite with `python3 -m unittest discover -s TOOLS/AgentKit/tests -v`.
