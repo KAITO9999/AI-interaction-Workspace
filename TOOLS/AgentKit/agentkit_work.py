@@ -121,8 +121,9 @@ def lint_python(root: Path, files: list[str], timeout: int) -> dict[str, Any]:
                             "stderr": result["stderr"][:6000], "timed_out": result["timed_out"]}],
                 "errors": [], "file_count": len(candidates)}
     py = shutil.which("python3") or sys.executable
-    result = run_argv([py, "-m", "py_compile", *[str(p) for p in candidates]], timeout, root)
-    return {"summary": "Python syntax-only fallback completed", "tool": "py_compile",
+    syntax_check = "import pathlib,sys; [compile(pathlib.Path(p).read_bytes(), p, 'exec') for p in sys.argv[1:]]"
+    result = run_argv([py, "-c", syntax_check, *[str(p) for p in candidates]], timeout, root)
+    return {"summary": "Python syntax-only fallback completed", "tool": "python compile()",
             "equivalence": "syntax-only; NOT Ruff-equivalent",
             "checks": [{"name": "python-syntax", "status": "PASS" if result["returncode"] == 0 else "FAIL",
                         "returncode": result["returncode"], "stdout": result["stdout"][:10000],
