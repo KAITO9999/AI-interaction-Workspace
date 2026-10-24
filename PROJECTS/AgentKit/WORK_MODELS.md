@@ -1,6 +1,6 @@
 # AgentKit — work models
 
-Status: smartphone profile preflight implementation active; runtime device testing remains a separate follow-up.
+Status: smartphone profile runtime validation remains pending; Python-first workflow tooling implementation passed hosted CI, with target-environment smoke tests still pending.
 
 ## Model A — environment helper or compatibility preflight
 
