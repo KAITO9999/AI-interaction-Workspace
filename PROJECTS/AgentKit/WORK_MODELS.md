@@ -27,3 +27,16 @@ Status: smartphone profile preflight implementation active; runtime device testi
 ## Limits
 
 The profile preflight does not emulate devices, install packages, run the app, or measure memory/CPU/GPU/frame rate, battery, or thermals. The canonical implementation and user instructions live in [AgentKit](../../TOOLS/AgentKit/README.md) and [smartphone test profiles](../../TOOLS/AgentKit/MOBILE_TESTING.md).
+## Model C — Python-first workflow tooling and context-bounded inspection
+
+**Use when:** adding reusable read-only repository checks, standard-library inspection tools, or tools intended to reduce agent context consumption.
+
+**Procedure:**
+1. Verify upstream command behavior and invoke the official command when present.
+2. Use Python standard-library implementations only where they can safely provide the named behavior; otherwise report unavailable.
+3. Make weaker fallbacks explicit in machine-readable output (for example, `py_compile` is syntax-only, not Ruff; `sh -n` is syntax-only, not ShellCheck).
+4. Apply strict path containment, bounded reads/output, timeouts, and read-only defaults. Avoid arbitrary SQL, shell interpolation, automatic installs, and file execution.
+5. Add boundary tests for path traversal, symlinks, byte/line budgets, invalid inputs, missing tools, and read-only behavior.
+6. Keep existing core/extension commands separate unless a later measured change proves consolidation improves compatibility without breaking the CLI.
+
+**Acceptance:** each check reports its actual tool and capability; unavailable or partial checks cannot be reported as full passes; tests and CI cover the new behavior.
