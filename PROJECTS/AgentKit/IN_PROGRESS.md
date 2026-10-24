@@ -22,7 +22,7 @@ Current status: implementation is on branch `work/agentkit-mobile-profiles`; Git
 - **Status:** implementation on branch; awaiting CI and boundary-test review.
 - **Actor:** AI
 - **Work mode:** online (GitHub connector used for repository inspection and branch edits).
-- **Scope:** add separate `agentkit_work.py` commands for Git-native read-only checks, Python lint with explicit syntax-only fallback, shell audit with explicit syntax-only fallback, read-only SQLite inspection, bounded artifact hashing/type hints, and context-limited line/search retrieval.
+- **Scope:** add separate `agentkit_work.py` commands for Git-native read-only checks, Python lint with explicit syntax-only fallback, shell audit with explicit syntax-only fallback, read-only SQLite inspection, bounded artifact hashing/type hints, and context-limited line/search retrieval. Add `agentkit_watch.py` for bounded verification reruns while source files are being edited.
 - **Compatibility rule:** invoke official tools when present; do not claim fallback parity where the fallback implements less. Git behavior is not simulated. Existing AgentKit command variants remain separate.
 - **Safety boundaries:** no shell interpolation; explicit subprocess timeouts; read-only SQLite; bounded artifact reads; context output byte/line limits; reject root escapes and skip symlinks in recursive context scans.
 - **Paths:** `TOOLS/AgentKit/agentkit_work.py`, `TOOLS/AgentKit/tests/test_agentkit_work.py`, `TOOLS/AgentKit/README.md`, `TOOLS/AgentKit/AI_USAGE.md`, `.github/workflows/agentkit-tests.yml`, `PROJECTS/AgentKit/WORK_MODELS.md`, `PROJECTS/AgentKit/PLAN.md`, `PROJECTS/AgentKit/IN_PROGRESS.md`, `LOGS/change-ledger.jsonl`.
