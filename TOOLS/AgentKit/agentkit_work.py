@@ -25,6 +25,11 @@ VERSION = "0.1.0"
 SKIP_DIRS = {".git", ".hg", ".svn", "node_modules", ".venv", "venv", "__pycache__", "target", "dist", "build", ".next", ".cache"}
 DEFAULT_MAX_BYTES = 1_000_000
 DEFAULT_MAX_LINES = 250
+MAX_SCAN_FILES = 10_000
+MAX_SOURCE_FILE_BYTES = 5_000_000
+MAX_TOTAL_SOURCE_BYTES = 50_000_000
+MAX_REPORTED_FINDINGS = 500
+PROCESS_OUTPUT_LIMIT = 12_000
 
 
 def emit(data: dict[str, Any], json_mode: bool = False) -> None:
@@ -43,6 +48,95 @@ def emit(data: dict[str, Any], json_mode: bool = False) -> None:
 def run_argv(argv: list[str], timeout: int = 30, cwd: Path | None = None) -> dict[str, Any]:
     """Run an argv command through the shared bounded process supervisor."""
     return run_process(argv, timeout=timeout, cwd=cwd, output_limit=12_000)
+
+
+def _discover_files(start: Path, boundary_root: Path, suffix: str,
+                    limit: int = MAX_SCAN_FILES) -> tuple[list[Path], bool]:
+    """Walk without following symlinks or traversing known dependency/build trees."""
+    candidates: list[Path] = []
+    for current, directories, filenames in os.walk(start, topdown=True, followlinks=False):
+        current_path = Path(current)
+        directories[:] = sorted(name for name in directories
+                                if name not in SKIP_DIRS and not (current_path / name).is_symlink())
+        for name in sorted(filenames):
+            if suffix and not name.endswith(suffix):
+                continue
+            path = current_path / name
+            if path.is_symlink():
+                continue
+            try:
+                if not path.is_file():
+                    continue
+                path.resolve().relative_to(boundary_root)
+            except (OSError, ValueError):
+                continue
+            candidates.append(path)
+            if len(candidates) > limit:
+                return candidates[:limit], True
+    return sorted(candidates), False
+
+
+def _source_budget_error(paths: list[Path]) -> str | None:
+    total = 0
+    for path in paths:
+        try:
+            size = path.stat().st_size
+        except OSError as exc:
+            return f"cannot stat {path}: {type(exc).__name__}: {exc}"
+        if size > MAX_SOURCE_FILE_BYTES:
+            return f"source file exceeds {MAX_SOURCE_FILE_BYTES} byte limit: {path}"
+        total += size
+        if total > MAX_TOTAL_SOURCE_BYTES:
+            return f"source set exceeds {MAX_TOTAL_SOURCE_BYTES} byte aggregate limit"
+    return None
+
+
+def _tail_text(existing: str, addition: str, limit: int = PROCESS_OUTPUT_LIMIT) -> str:
+    if not addition:
+        return existing
+    return (existing + ("\n" if existing else "") + addition)[-limit:]
+
+
+def _run_file_batches(executable: str, prefix_args: list[str], paths: list[Path],
+                      timeout: int, cwd: Path, batch_size: int = 100) -> dict[str, Any]:
+    """Run file-oriented tools in bounded argv batches under one overall deadline."""
+    started = time.monotonic()
+    stdout = ""
+    stderr = ""
+    any_failure = False
+    timed_out = False
+    launch_error = None
+    stdout_truncated = False
+    stderr_truncated = False
+    batch_count = (len(paths) + batch_size - 1) // batch_size
+    for index in range(0, len(paths), batch_size):
+        remaining = timeout - (time.monotonic() - started)
+        if remaining <= 0:
+            timed_out = True
+            stderr = _tail_text(stderr, f"TIMEOUT: total tool deadline of {timeout}s exhausted")
+            break
+        result = run_argv([executable, *prefix_args,
+                           *[str(path) for path in paths[index:index + batch_size]]],
+                          timeout=max(0.05, remaining), cwd=cwd)
+        label = f"[batch {index // batch_size + 1}/{batch_count}]"
+        stdout = _tail_text(stdout, f"{label}\n{result['stdout']}")
+        stderr = _tail_text(stderr, f"{label}\n{result['stderr']}")
+        stdout_truncated = stdout_truncated or bool(result.get("stdout_truncated"))
+        stderr_truncated = stderr_truncated or bool(result.get("stderr_truncated"))
+        if result.get("timed_out"):
+            timed_out = True
+            break
+        if result.get("launch_error"):
+            launch_error = str(result["launch_error"])
+            break
+        if result.get("returncode") != 0:
+            any_failure = True
+    status = "TIMEOUT" if timed_out else "UNAVAILABLE" if launch_error else "FAIL" if any_failure else "PASS"
+    return {"status": status, "returncode": 124 if timed_out else 127 if launch_error else 1 if any_failure else 0,
+            "stdout": stdout, "stderr": stderr, "timed_out": timed_out,
+            "launch_error": launch_error, "stdout_truncated": stdout_truncated,
+            "stderr_truncated": stderr_truncated, "duration_seconds": round(time.monotonic() - started, 3),
+            "batch_count": batch_count}
 
 
 def repo_check(root: Path, timeout: int) -> dict[str, Any]:
