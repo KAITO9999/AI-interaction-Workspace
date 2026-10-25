@@ -19,6 +19,8 @@ import time
 from pathlib import Path
 from typing import Any, Iterable
 
+from agentkit_lint import lint_python_source, lint_shell_source
+
 VERSION = "0.1.0"
 SKIP_DIRS = {".git", ".hg", ".svn", "node_modules", ".venv", "venv", "__pycache__", "target", "dist", "build", ".next", ".cache"}
 DEFAULT_MAX_BYTES = 1_000_000
@@ -120,15 +122,26 @@ def lint_python(root: Path, files: list[str], timeout: int) -> dict[str, Any]:
                             "returncode": result["returncode"], "stdout": result["stdout"][:30000],
                             "stderr": result["stderr"][:6000], "timed_out": result["timed_out"]}],
                 "errors": [], "file_count": len(candidates)}
-    py = shutil.which("python3") or sys.executable
-    syntax_check = "import pathlib,sys; [compile(pathlib.Path(p).read_bytes(), p, 'exec') for p in sys.argv[1:]]"
-    result = run_argv([py, "-c", syntax_check, *[str(p) for p in candidates]], timeout, root)
-    return {"summary": "Python syntax-only fallback completed", "tool": "python compile()",
-            "equivalence": "syntax-only; NOT Ruff-equivalent",
-            "checks": [{"name": "python-syntax", "status": "PASS" if result["returncode"] == 0 else "FAIL",
-                        "returncode": result["returncode"], "stdout": result["stdout"][:10000],
-                        "stderr": result["stderr"][:6000], "timed_out": result["timed_out"]}],
-            "warnings": ["ruff not found; lint rules were not checked"], "errors": [], "file_count": len(candidates)}
+    reports = []
+    read_errors = []
+    for path in candidates:
+        try:
+            findings = lint_python_source(path.read_text(encoding="utf-8"), str(path))
+            reports.append({"file": str(path.relative_to(root)), "findings": findings})
+        except (OSError, UnicodeError) as exc:
+            read_errors.append(f"{path}: {type(exc).__name__}: {exc}")
+    has_findings = any(report["findings"] for report in reports)
+    has_syntax_error = any(finding["rule"] == "PY-SYNTAX"
+                           for report in reports for finding in report["findings"])
+    status = "FAIL" if has_findings or read_errors else "PASS"
+    return {"summary": "Python native static checks completed",
+            "tool": "AgentKit AST checks", "equivalence": "limited AST rules; NOT Ruff-equivalent",
+            "checks": [{"name": "python-native-lint", "status": status,
+                        "returncode": 1 if status == "FAIL" else 0,
+                        "stdout": json.dumps(reports, ensure_ascii=False)[:30000],
+                        "stderr": "\\n".join(read_errors)[:6000], "timed_out": False}],
+            "warnings": ["ruff not found; only syntax, unused imports, bare except and mutable literal defaults are checked"],
+            "errors": read_errors, "file_count": len(candidates), "findings": reports}
 
 
 def audit_shell(root: Path, files: list[str], dialect: str, timeout: int) -> dict[str, Any]:
@@ -163,18 +176,27 @@ def audit_shell(root: Path, files: list[str], dialect: str, timeout: int) -> dic
         if not shell:
             return {"summary": "Shell audit unavailable", "checks": [], "errors": [f"neither shellcheck nor {dialect} is available"]}
         failures = []
+        native_reports = []
         for path in candidates:
             result_one = run_argv([shell, "-n", str(path)], timeout, root)
             if result_one["returncode"] != 0:
                 failures.append({"file": str(path.relative_to(root)), "returncode": result_one["returncode"],
                                  "stderr": result_one["stderr"][:2000], "timed_out": result_one["timed_out"]})
-        result = {"returncode": 1 if failures else 0, "stdout": "", "stderr": json.dumps(failures, ensure_ascii=False)}
-        tool, equivalence = dialect + " -n", "syntax-only; NOT ShellCheck-equivalent"
+            try:
+                findings = lint_shell_source(path.read_text(encoding="utf-8"), dialect)
+                native_reports.append({"file": str(path.relative_to(root)), "findings": findings})
+            except (OSError, UnicodeError) as exc:
+                failures.append({"file": str(path.relative_to(root)), "error": f"{type(exc).__name__}: {exc}"})
+        has_findings = any(report["findings"] for report in native_reports)
+        result = {"returncode": 1 if failures or has_findings else 0,
+                  "stdout": json.dumps(native_reports, ensure_ascii=False),
+                  "stderr": json.dumps(failures, ensure_ascii=False), "timed_out": False}
+        tool, equivalence = dialect + " -n + AgentKit rules", "syntax + limited heuristics; NOT ShellCheck-equivalent"
     return {"summary": "Shell audit completed", "tool": tool, "equivalence": equivalence,
             "checks": [{"name": "shell-audit", "status": "PASS" if result["returncode"] == 0 else "FAIL",
-                        "returncode": result["returncode"], "stdout": result.get("stdout", "")[:20000],
+                        "returncode": result["returncode"], "stdout": result.get("stdout", "")[:30000],
                         "stderr": result.get("stderr", "")[:8000], "timed_out": result.get("timed_out", False)}],
-            "warnings": [] if tool == "shellcheck" else ["shellcheck not found; only shell syntax was checked"],
+            "warnings": [] if tool == "shellcheck" else ["shellcheck not found; fallback checks syntax and a limited set of quoting/command-substitution pitfalls"],
             "errors": [], "file_count": len(candidates), "dialect": dialect}
 
 
