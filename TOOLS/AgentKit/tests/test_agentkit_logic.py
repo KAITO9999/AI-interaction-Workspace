@@ -88,7 +88,7 @@ class AgentKitLogicBoundaryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "sample.py"
-            source.write_text("import os\\nprint('ok')\\n", encoding="utf-8")
+            source.write_text("import os\nprint('ok')\n", encoding="utf-8")
             with patch("agentkit_work.shutil.which", return_value=None):
                 report = agentkit_work.lint_python(root, ["sample.py"], 5)
             self.assertEqual(report["tool"], "AgentKit AST checks")
@@ -101,7 +101,7 @@ class AgentKitLogicBoundaryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "sample.sh"
-            source.write_text("echo $HOME\\n", encoding="utf-8")
+            source.write_text("echo $HOME\n", encoding="utf-8")
             with patch("agentkit_work.shutil.which", side_effect=lambda name: None if name == "shellcheck" else ("/bin/sh" if name == "sh" else None)):
                 report = agentkit_work.audit_shell(root, ["sample.sh"], "sh", 5)
             self.assertEqual(report["tool"], "sh -n + AgentKit rules")
