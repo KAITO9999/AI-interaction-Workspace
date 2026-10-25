@@ -255,8 +255,8 @@ def lint_python(root: Path, files: list[str], timeout: int) -> dict[str, Any]:
     limit_failure = any("limit" in error.lower() or "exceeds" in error.lower() for error in read_errors)
     serialized_reports = json.dumps(reports, ensure_ascii=False)
     report_output_truncated = len(serialized_reports.encode("utf-8")) > PROCESS_OUTPUT_LIMIT
-    status = ("LIMIT" if limit_failure else "FAIL" if has_findings or read_errors
-              else "LIMIT" if findings_truncated or report_output_truncated else "PASS")
+    status = ("LIMIT" if limit_failure or findings_truncated or report_output_truncated
+              else "FAIL" if has_findings or read_errors else "PASS")
     warnings = ["ruff not found; only syntax, unused imports, bare except and mutable literal defaults are checked"]
     if findings_truncated:
         warnings.append(f"reported findings capped at {MAX_REPORTED_FINDINGS}")
@@ -374,8 +374,8 @@ def audit_shell(root: Path, files: list[str], dialect: str, timeout: int) -> dic
         serialized_reports = json.dumps(native_reports, ensure_ascii=False)
         report_output_truncated = len(serialized_reports.encode("utf-8")) > PROCESS_OUTPUT_LIMIT
         status = ("TIMEOUT" if timed_out else "UNAVAILABLE" if launch_error
-                  else "LIMIT" if limit_failure else "FAIL" if failures or has_findings
-                  else "LIMIT" if findings_truncated or report_output_truncated else "PASS")
+                  else "LIMIT" if limit_failure or findings_truncated or report_output_truncated
+                  else "FAIL" if failures or has_findings else "PASS")
         stdout = serialized_reports.encode("utf-8")[-PROCESS_OUTPUT_LIMIT:].decode("utf-8", errors="replace")
         result = {"status": status,
                   "returncode": 124 if timed_out else 127 if launch_error else 1 if failures or has_findings or findings_truncated or report_output_truncated else 0,
