@@ -195,7 +195,9 @@ class AgentKitWorkTests(unittest.TestCase):
             with patch("agentkit_work.shutil.which", return_value=None):
                 report = agentkit_work.lint_python(root, [], 5)
             self.assertEqual(report["status"], "PASS")
-            self.assertEqual([item["file"] for item in report["findings"]], ["safe.py"])
+            self.assertEqual(report["file_count"], 1)
+            self.assertEqual(report["findings"], [])
+            self.assertNotIn("outside.py", json.dumps(report))
 
     def test_zero_discovered_scripts_is_unavailable_not_success(self):
         with tempfile.TemporaryDirectory() as directory:

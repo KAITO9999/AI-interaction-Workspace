@@ -245,24 +245,34 @@ def lint_python(root: Path, files: list[str], timeout: int) -> dict[str, Any]:
             remaining_findings -= len(kept)
             if len(kept) != len(findings):
                 findings_truncated = True
-            reports.append({"file": str(path.relative_to(root)), "findings": kept})
+            if kept:
+                reports.append({"file": str(path.relative_to(root)), "findings": kept})
         except (OSError, UnicodeError) as exc:
             read_errors.append(f"{path}: {type(exc).__name__}: {exc}")
     has_findings = any(report["findings"] for report in reports)
     limit_failure = any("limit" in error.lower() or "exceeds" in error.lower() for error in read_errors)
-    status = "LIMIT" if limit_failure or findings_truncated else "FAIL" if has_findings or read_errors else "PASS"
+    has_findings = any(report["findings"] for report in reports)
+    limit_failure = any("limit" in error.lower() or "exceeds" in error.lower() for error in read_errors)
+    serialized_reports = json.dumps(reports, ensure_ascii=False)
+    report_output_truncated = len(serialized_reports.encode("utf-8")) > PROCESS_OUTPUT_LIMIT
+    status = ("LIMIT" if limit_failure else "FAIL" if has_findings or read_errors
+              else "LIMIT" if findings_truncated or report_output_truncated else "PASS")
     warnings = ["ruff not found; only syntax, unused imports, bare except and mutable literal defaults are checked"]
     if findings_truncated:
         warnings.append(f"reported findings capped at {MAX_REPORTED_FINDINGS}")
+    if report_output_truncated:
+        warnings.append(f"diagnostic JSON output capped at {PROCESS_OUTPUT_LIMIT} bytes")
+    stdout = serialized_reports.encode("utf-8")[-PROCESS_OUTPUT_LIMIT:].decode("utf-8", errors="replace")
     return {"summary": "Python native static checks completed", "status": status,
             "tool": "AgentKit AST checks", "equivalence": "limited AST rules; NOT Ruff-equivalent",
             "checks": [{"name": "python-native-lint", "status": status,
                         "returncode": 1 if status != "PASS" else 0,
-                        "stdout": json.dumps(reports, ensure_ascii=False)[-PROCESS_OUTPUT_LIMIT:],
+                        "stdout": stdout, "stdout_truncated": report_output_truncated,
                         "stderr": "\n".join(read_errors)[-6000:], "timed_out": False,
                         "findings_truncated": findings_truncated}],
             "warnings": warnings, "errors": read_errors, "file_count": len(candidates),
-            "findings": reports, "findings_truncated": findings_truncated}
+            "findings": reports, "findings_truncated": findings_truncated,
+            "stdout_truncated": report_output_truncated}
 
 
 def audit_shell(root: Path, files: list[str], dialect: str, timeout: int) -> dict[str, Any]:
@@ -354,18 +364,22 @@ def audit_shell(root: Path, files: list[str], dialect: str, timeout: int) -> dic
                 remaining_findings -= len(kept)
                 if len(kept) != len(findings):
                     findings_truncated = True
-                native_reports.append({"file": str(path.relative_to(root)), "findings": kept})
+                if kept:
+                    native_reports.append({"file": str(path.relative_to(root)), "findings": kept})
             except (OSError, UnicodeError, ValueError) as exc:
                 failures.append({"file": str(path.relative_to(root)), "error": f"{type(exc).__name__}: {exc}"})
                 break
         has_findings = any(report["findings"] for report in native_reports)
         limit_failure = any("limit" in str(item).lower() or "exceeds" in str(item).lower() for item in failures)
+        serialized_reports = json.dumps(native_reports, ensure_ascii=False)
+        report_output_truncated = len(serialized_reports.encode("utf-8")) > PROCESS_OUTPUT_LIMIT
         status = ("TIMEOUT" if timed_out else "UNAVAILABLE" if launch_error
-                  else "LIMIT" if limit_failure or findings_truncated
-                  else "FAIL" if failures or has_findings else "PASS")
+                  else "LIMIT" if limit_failure else "FAIL" if failures or has_findings
+                  else "LIMIT" if findings_truncated or report_output_truncated else "PASS")
+        stdout = serialized_reports.encode("utf-8")[-PROCESS_OUTPUT_LIMIT:].decode("utf-8", errors="replace")
         result = {"status": status,
-                  "returncode": 124 if timed_out else 127 if launch_error else 1 if failures or has_findings or findings_truncated else 0,
-                  "stdout": json.dumps(native_reports, ensure_ascii=False)[-PROCESS_OUTPUT_LIMIT:],
+                  "returncode": 124 if timed_out else 127 if launch_error else 1 if failures or has_findings or findings_truncated or report_output_truncated else 0,
+                  "stdout": stdout, "stdout_truncated": report_output_truncated,
                   "stderr": json.dumps(failures, ensure_ascii=False)[-8000:],
                   "timed_out": timed_out, "launch_error": launch_error,
                   "findings_truncated": findings_truncated}
