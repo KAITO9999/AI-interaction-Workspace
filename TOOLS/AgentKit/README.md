@@ -168,3 +168,12 @@ Machine-readable status values have consistent meanings: PASS means the check co
 Discovery prunes common dependency/build directories, skips symlinks, and fails closed above 10,000 files. Static-analysis input is capped at 5 MB per file and 50 MB total; the fallback reports at most 500 findings. Ruff and ShellCheck calls are split into batches of up to 100 paths under one overall deadline. Watch snapshots have their own 10,000-file and 100 MB limits. These bounds are intentional; narrow a target instead of assuming a partial scan was complete.
 
 The process runner follows Python's subprocess API and cleanup cautions: [Python 3.12 subprocess documentation](https://docs.python.org/3.12/library/subprocess.html). Ruff's supported check options are documented in [Ruff configuration and CLI documentation](https://docs.astral.sh/ruff/configuration/). ShellCheck remains the preferred shell analyzer; see the [ShellCheck upstream project](https://github.com/koalaman/shellcheck#readme). None of these native fallbacks claim feature parity with the upstream analyzers.
+
+
+### Runtime command integration
+
+All AgentKit runtime subprocess launches are routed through agentkit_process.py. This includes repository reachability checks and version probes (agentkit.py), TypeScript and addon JavaScript checks (agentkit_ext.py), Git metadata lookup, resolver commands (agentkit_resolve.py), static analysis (agentkit_work.py), and watcher verification (agentkit_watch.py). Unit-test harnesses naturally continue to use subprocess APIs to launch the tools under test.
+
+The runner supports live stdout/stderr forwarding while retaining only bounded diagnostic tails, a progress callback for long-running operations, byte/line accounting, a shared deadline, and POSIX process-group cleanup. This allows user-facing commands to remain responsive without keeping unlimited captured output in memory. If a diagnostic report is truncated, the relevant checker returns or emits a LIMIT / truncation indication rather than silently claiming a complete inspection.
+
+Latest hosted validation: [GitHub Actions run 40155773915](https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/40155773915) passed all **96 unit tests**, Python compilation, POSIX shell syntax, change-ledger provenance, and local Markdown-link validation. This is hosted Ubuntu evidence; Termux/device runtime testing remains unverified.
