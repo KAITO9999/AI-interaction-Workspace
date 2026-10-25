@@ -220,7 +220,7 @@ def run_process(
                 _terminate_process_tree(process, terminate_grace)
                 break
             time.sleep(min(0.02, remaining))
-    except KeyboardInterrupt:
+    except BaseException:
         _terminate_process_tree(process, terminate_grace)
         _join_readers(threads, streams)
         raise

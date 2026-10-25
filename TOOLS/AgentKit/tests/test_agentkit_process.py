@@ -81,5 +81,34 @@ class AgentKitProcessTests(unittest.TestCase):
             agentkit_process.run_process([sys.executable, "-c", "pass"], timeout=1, output_limit=0)
 
 
+    def test_live_output_is_forwarded_while_capture_remains_bounded(self):
+        import io
+        from unittest.mock import patch
+        captured = io.StringIO()
+        with patch("agentkit_process.sys.stdout", captured):
+            result = agentkit_process.run_process(
+                [sys.executable, "-c", "print('live'); print('tail', end='')"],
+                timeout=3, output_limit=128, stream_output=True,
+            )
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(captured.getvalue(), "live\ntail")
+        self.assertEqual(result["stdout"], "live\ntail")
+        self.assertEqual(result["stdout_line_count"], 2)
+        self.assertEqual(result["stdout_total_bytes"], len(b"live\ntail"))
+
+    def test_progress_callback_observes_elapsed_and_remaining(self):
+        progress = []
+        result = agentkit_process.run_process(
+            [sys.executable, "-c", "import time; time.sleep(0.16)"],
+            timeout=2, on_progress=lambda elapsed, remaining: progress.append((elapsed, remaining)),
+            progress_interval=0.03,
+        )
+        self.assertEqual(result["status"], "PASS")
+        self.assertTrue(progress)
+        self.assertTrue(all(elapsed >= 0 and remaining >= 0 for elapsed, remaining in progress))
+        self.assertEqual(progress, sorted(progress))
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
