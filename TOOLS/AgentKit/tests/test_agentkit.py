@@ -51,4 +51,17 @@ class AgentKitTests(unittest.TestCase):
             self.assertEqual(r.returncode,124,r.stdout+r.stderr); self.assertIn("タイムアウト",r.stdout)
     def test_timer_zero(self):
         r=run("timer","0"); self.assertEqual(r.returncode,0); self.assertIn("終了予定(local)",r.stdout); self.assertIn("終了予定(UTC)",r.stdout)
+
+    def test_fetch_probe_counts_lines_even_when_diagnostics_are_truncated(self):
+        with tempfile.TemporaryDirectory() as d:
+            fake=Path(d,"git")
+            fake.write_text(f"#!{sys.executable}\nprint('a'*5000)\nprint('ref-two')\n",encoding="utf-8")
+            fake.chmod(0o755)
+            env=os.environ.copy(); env["PATH"]=d+os.pathsep+env.get("PATH","")
+            r=run("fetch-probe","https://example.invalid/test.git","--timeout","3",timeout=5,env=env)
+            self.assertEqual(r.returncode,0,r.stdout+r.stderr)
+            self.assertIn("refs=2",r.stdout)
+            self.assertIn("診断用バッファ",r.stdout)
+
+
 if __name__=="__main__": unittest.main(verbosity=2)
