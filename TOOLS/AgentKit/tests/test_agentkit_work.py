@@ -222,5 +222,46 @@ class AgentKitWorkTests(unittest.TestCase):
 
 
 
+    def test_native_finding_cap_is_reported_as_limit_not_pass(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.py").write_text("import os\nimport json\n", encoding="utf-8")
+            with patch("agentkit_work.shutil.which", return_value=None), patch(
+                "agentkit_work.MAX_REPORTED_FINDINGS", 1
+            ):
+                report = agentkit_work.lint_python(root, [], 5)
+            self.assertEqual(report["status"], "LIMIT")
+            self.assertTrue(report["findings_truncated"])
+            self.assertEqual(sum(len(item["findings"]) for item in report["findings"]), 1)
+
+    def test_lint_batches_do_not_call_truncated_output_a_pass(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sample = root / "sample.py"
+            sample.write_text("value = 1\n", encoding="utf-8")
+            mocked = {
+                "returncode": 0, "stdout": "partial", "stderr": "", "timed_out": False,
+                "launch_error": None, "capture_error": None,
+                "stdout_truncated": True, "stderr_truncated": False,
+            }
+            with patch("agentkit_work.run_argv", return_value=mocked):
+                report = agentkit_work._run_file_batches("/fake/ruff", ["check"], [sample], 5, root)
+            self.assertEqual(report["status"], "LIMIT")
+            self.assertEqual(report["returncode"], 1)
+            self.assertTrue(report["stdout_truncated"])
+
+    def test_file_discovery_reports_limit_without_claiming_complete_scan(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "a.py").write_text("a = 1\n", encoding="utf-8")
+            (root / "b.py").write_text("b = 2\n", encoding="utf-8")
+            paths, limited = agentkit_work._discover_files(root, root, ".py", limit=1)
+            self.assertEqual(len(paths), 1)
+            self.assertTrue(limited)
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
