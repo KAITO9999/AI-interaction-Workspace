@@ -118,8 +118,8 @@ python3 TOOLS/AgentKit/agentkit_work.py context --root . --target TOOLS/AgentKit
 ```
 
 - `repo-check` invokes Git itself for status, staged/unstaged whitespace checks and summaries. If Git or a Git worktree is absent, it fails explicitly; it does not simulate Git.
-- `lint-python` uses `ruff check` when available; otherwise it uses Python's built-in `compile()` without writing bytecode and labels the result **syntax-only**, not lint-equivalent.
-- `audit-shell` uses ShellCheck when available; otherwise it uses the explicitly selected `sh -n` or `bash -n` syntax checker. It never claims parity with ShellCheck.
+- `lint-python` uses `ruff check` when available; otherwise it runs `agentkit_lint.py`'s Python-AST fallback: syntax validation, unused-import checks (F401-like), bare-except checks (E722-like), and mutable literal default checks. This limited rule set is **not Ruff-equivalent** and can miss issues or report scope-related false positives.
+- `audit-shell` uses ShellCheck when available; otherwise it combines the explicitly selected `sh -n` or `bash -n` syntax checker with `agentkit_lint.py` heuristics for unquoted expansions (SC2086-like), unquoted command substitutions (SC2046-like), exported command substitutions (SC2155-like), legacy backticks (SC2006-like), and delayed exit-status checks (SC2181-like). This small line-based rule set is **not ShellCheck-equivalent**; review findings manually.
 - `sqlite-inspect` uses Python's standard-library SQLite binding in read-only mode; arbitrary SQL is not accepted. Row counts and integrity checks are opt-in.
 - `artifact-inspect` computes SHA-256 and checks a small magic-byte allowlist within a byte budget; when the official `file` utility is available, it also records that utility's description. The Python magic list is only a fallback hint, not a full replacement for `file`. It never executes files; unknown file types remain unknown.
 - `context` reads bounded line ranges or matching lines and emits machine-readable JSON when requested. It excludes dependency/build directories, rejects root escapes and skips symlinks during recursive scans. Default limits are 250 output lines and 1 MB of scanned file content.
@@ -145,3 +145,15 @@ The wrappers intentionally invoke the upstream command rather than reimplementin
 - [ShellCheck](https://github.com/koalaman/shellcheck): shell static analysis. `sh -n`/`bash -n` only check syntax.
 - [Python `sqlite3`](https://docs.python.org/3/library/sqlite3.html) and [SQLite URI filenames](https://www.sqlite.org/uri.html): read-only `mode=ro` behavior.
 - [`file(1)` manual](https://man7.org/linux/man-pages/man1/file.1.html): upstream file-type description. The Python magic-byte allowlist is deliberately incomplete.
+
+
+### Dependency-free static-analysis fallback
+
+Run the limited native checks directly when investigating the fallback itself:
+
+```sh
+python3 TOOLS/AgentKit/agentkit_lint.py python TOOLS/AgentKit/agentkit_work.py
+python3 TOOLS/AgentKit/agentkit_lint.py shell --dialect sh TOOLS/AgentKit/agentkit
+```
+
+The fallback intentionally has no third-party dependencies and does not download/install anything. Its Python rules use `ast`; its shell rules are conservative line heuristics and do not parse full shell grammar. Upstream Ruff/ShellCheck remain preferred whenever present. Native fallback findings cause `lint-python` / `audit-shell` to fail so they cannot silently pass CI; distinguish warnings from syntax errors in the JSON report. Tests cover both rule behavior and false-positive boundaries.
