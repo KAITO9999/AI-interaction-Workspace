@@ -36,7 +36,7 @@ def emit(data: dict[str, Any], json_mode: bool = False) -> None:
     if json_mode:
         print(json.dumps(data, ensure_ascii=False, indent=2))
         return
-    print(data.get("summary", "AgentKit work report"))
+    print("{}: {}".format(data.get("status", "INFO"), data.get("summary", "AgentKit work report")))
     for item in data.get("checks", []):
         print(f"{item.get('status', 'INFO')} {item.get('name', 'check')}: {item.get('detail', '')}")
     for warning in data.get("warnings", []):
@@ -431,7 +431,6 @@ MAGIC = (
     (b"\x89PNG\r\n\x1a\n", "PNG image"),
     (b"\xff\xd8\xff", "JPEG image"),
     (b"SQLite format 3\x00", "SQLite database"),
-    (b"\x7fELF", "ELF executable/object"),
 )
 
 
@@ -481,8 +480,9 @@ def artifact_inspect(paths: list[str], max_bytes: int) -> dict[str, Any]:
                             "extension": path.suffix.lower(), "extension_matches_magic": _extension_hint(path.suffix.lower(), kind)})
         except OSError as exc:
             errors.append(f"{path}: {type(exc).__name__}: {exc}")
+    status = "FAIL" if errors else "LIMIT" if any(item.get("status") == "LIMIT" for item in reports) else "PASS"
     return {"summary": "Artifact inspection complete; no files executed or modified",
-            "artifacts": reports, "checks": [], "errors": errors, "read_only": True}
+            "status": status, "artifacts": reports, "checks": [], "errors": errors, "read_only": True}
 
 
 def _extension_hint(extension: str, kind: str) -> bool | None:
@@ -599,14 +599,14 @@ def build_parser() -> argparse.ArgumentParser:
     item.add_argument("--json", action="store_true")
     item.set_defaults(handler=lambda a: repo_check(Path(a.root), a.timeout), json_arg="json")
 
-    item = sub.add_parser("lint-python", help="Use Ruff; fall back to syntax-only py_compile.")
+    item = sub.add_parser("lint-python", help="Use Ruff; otherwise run limited AST rules that are not Ruff-equivalent.")
     item.add_argument("--root", default=".")
     item.add_argument("--file", action="append", default=[])
     item.add_argument("--timeout", type=int, default=120)
     item.add_argument("--json", action="store_true")
     item.set_defaults(handler=lambda a: lint_python(Path(a.root), a.file, a.timeout), json_arg="json")
 
-    item = sub.add_parser("audit-shell", help="Use ShellCheck; fall back to dialect-specific -n syntax check.")
+    item = sub.add_parser("audit-shell", help="Use ShellCheck; otherwise run -n syntax plus limited heuristics, not ShellCheck-equivalent.")
     item.add_argument("--root", default=".")
     item.add_argument("--file", action="append", default=[])
     item.add_argument("--dialect", choices=("sh", "bash"), default="sh")

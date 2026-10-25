@@ -86,7 +86,8 @@ class AgentKitWorkTests(unittest.TestCase):
             path.write_bytes(b"x" * 100)
             result = run("artifact-inspect", str(path), "--max-bytes", "10", "--json")
             report = json.loads(result.stdout)
-            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(report["status"], "LIMIT")
             self.assertEqual(report["artifacts"][0]["status"], "LIMIT")
             self.assertNotIn("sha256", report["artifacts"][0])
 
@@ -176,6 +177,47 @@ class AgentKitWorkTests(unittest.TestCase):
         result = run("--version")
         self.assertEqual(result.returncode, 0)
         self.assertIn("0.1.0", result.stdout)
+
+
+    def test_auto_lint_skips_symlink_files_to_outside_root(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            root = Path(directory)
+            (root / "safe.py").write_text("value = 1\n", encoding="utf-8")
+            external = Path(outside) / "outside.py"
+            external.write_text("import os\n", encoding="utf-8")
+            try:
+                (root / "escape.py").symlink_to(external)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlinks unavailable")
+            from unittest.mock import patch
+            with patch("agentkit_work.shutil.which", return_value=None):
+                report = agentkit_work.lint_python(root, [], 5)
+            self.assertEqual(report["status"], "PASS")
+            self.assertEqual([item["file"] for item in report["findings"]], ["safe.py"])
+
+    def test_zero_discovered_scripts_is_unavailable_not_success(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = agentkit_work.audit_shell(Path(directory), [], "sh", 2)
+            self.assertEqual(report["status"], "UNAVAILABLE")
+            self.assertTrue(report["errors"])
+
+    def test_process_timeout_status_is_preserved_by_lint_integration(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.py").write_text("value = 1\n", encoding="utf-8")
+            timeout_result = {
+                "status": "TIMEOUT", "returncode": 124, "stdout": "", "stderr": "TIMEOUT",
+                "timed_out": True, "launch_error": None, "stdout_truncated": False,
+                "stderr_truncated": False, "duration_seconds": 1, "batch_count": 1,
+            }
+            with patch("agentkit_work.shutil.which", return_value="/fake/ruff"), patch(
+                "agentkit_work._run_file_batches", return_value=timeout_result
+            ):
+                report = agentkit_work.lint_python(root, ["sample.py"], 1)
+            self.assertEqual(report["status"], "TIMEOUT")
+            self.assertEqual(report["checks"][0]["status"], "TIMEOUT")
+
 
 
 if __name__ == "__main__":
