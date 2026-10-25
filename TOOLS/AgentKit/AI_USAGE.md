@@ -65,9 +65,17 @@ These are reference candidates, not vendored dependencies. Check the current rep
 
 - Use `python3 TOOLS/AgentKit/agentkit_work.py context --root <root> --target <path> --start <n> --end <n> --json` to retrieve only a line range, or `--pattern <text>` to return matching lines. Keep `--max-lines` and `--max-bytes` bounded; do not dump whole repositories/files when a focused range suffices.
 - Use `repo-check` for read-only Git status and staged/unstaged diff checks. If Git is missing or the target is not a worktree, treat that check as unavailable; never approximate Git semantics.
-- Use `lint-python` and `audit-shell` before claiming static validation. Record whether Ruff/ShellCheck ran or whether only syntax-level fallback checks were possible.
+- Use `lint-python` and `audit-shell` before claiming static validation. Record whether Ruff/ShellCheck ran or whether the dependency-free `agentkit_lint.py` fallback ran. The fallback checks a small set of AST/line-based rules and is not equivalent to either upstream linter; never describe it as full lint coverage. Review its findings for false positives and false negatives.
 - Use `sqlite-inspect` only with an explicit database path; it opens the DB read-only and does not accept arbitrary SQL.
 - Use `artifact-inspect` for bounded magic-byte and SHA-256 reports. A magic-byte guess is not proof of safety or runtime compatibility.
 - Treat JSON reports as evidence with explicit limits, not proof beyond the checks named. Keep separate checks running when one unrelated check fails; do not convert unavailable checks into PASS.
 
 - For concurrent editing and verification, run `python3 TOOLS/AgentKit/agentkit_watch.py --root <root> --watch <source-dir> --watch <test-dir> -- python3 -m unittest discover -s <test-dir> -v` in a separate terminal. The watcher uses content hashes, a debounce interval and bounded runs/timeouts; it does not execute a shell command string. Choose explicit watch roots and an explicit test command.
+
+
+## Native static-analysis fallback and logic tests
+
+- When Ruff is absent, `agentkit_work.py lint-python` uses `agentkit_lint.py` for syntax, unused-import, bare-except and mutable-literal-default checks. When ShellCheck is absent, `audit-shell` combines the selected shell's `-n` syntax check with limited heuristics for common quoting/expansion pitfalls.
+- Prefer upstream tools when available. The native fallback is a bounded subset, not a compatibility clone; its report must preserve that distinction.
+- For changes to fallback logic, add tests for both detection and non-detection cases (e.g. quoted variables, assignment contexts, `__init__.py` re-exports), then run `python3 -m unittest discover -s TOOLS/AgentKit/tests -v`.
+- For resource/path logic, test root escape rejection, symlink boundaries, output/byte budgets, timeout behavior, and read-only guarantees. Hosted CI is not a substitute for Termux or target virtual-Linux smoke tests.
