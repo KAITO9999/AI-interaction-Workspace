@@ -83,5 +83,32 @@ class AgentKitLogicBoundaryTests(unittest.TestCase):
             self.assertFalse(root.exists())
 
 
+    def test_lint_python_integrates_native_fallback_when_ruff_missing(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "sample.py"
+            source.write_text("import os\\nprint('ok')\\n", encoding="utf-8")
+            with patch("agentkit_work.shutil.which", return_value=None):
+                report = agentkit_work.lint_python(root, ["sample.py"], 5)
+            self.assertEqual(report["tool"], "AgentKit AST checks")
+            self.assertEqual(report["checks"][0]["status"], "FAIL")
+            self.assertIn("F401", report["checks"][0]["stdout"])
+            self.assertIn("NOT Ruff-equivalent", report["equivalence"])
+
+    def test_audit_shell_integrates_native_fallback_when_shellcheck_missing(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "sample.sh"
+            source.write_text("echo $HOME\\n", encoding="utf-8")
+            with patch("agentkit_work.shutil.which", side_effect=lambda name: None if name == "shellcheck" else ("/bin/sh" if name == "sh" else None)):
+                report = agentkit_work.audit_shell(root, ["sample.sh"], "sh", 5)
+            self.assertEqual(report["tool"], "sh -n + AgentKit rules")
+            self.assertEqual(report["checks"][0]["status"], "FAIL")
+            self.assertIn("SC2086", report["checks"][0]["stdout"])
+            self.assertIn("NOT ShellCheck-equivalent", report["equivalence"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
