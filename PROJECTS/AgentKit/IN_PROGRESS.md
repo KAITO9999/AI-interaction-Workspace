@@ -33,11 +33,19 @@ Current status: implementation is on branch `work/agentkit-mobile-profiles`; Git
 
 ### AK-LINT-001 — Native static-analysis fallback
 
-- Status: implementation drafted; hosted CI pending.
+- Status: core implementation exercised in hosted CI; current output-reporting refinements are under revalidation. PR remains draft.
 - Actor: AI; work mode: online.
 - Scope: add dependency-free AST checks for Python and limited shell heuristics when Ruff/ShellCheck are absent, integrate them into existing commands, and add tests for rules, false-positive boundaries, path containment, resource limits and timeout behavior.
 - Compatibility: official tools remain preferred; fallback is a limited subset and is not equivalent.
 - Paths: TOOLS/AgentKit/agentkit_lint.py, TOOLS/AgentKit/tests/test_agentkit_lint.py, TOOLS/AgentKit/tests/test_agentkit_logic.py, TOOLS/AgentKit/agentkit_work.py, .github/workflows/agentkit-tests.yml, TOOLS/AgentKit/README.md, TOOLS/AgentKit/AI_USAGE.md, PROJECTS/AgentKit/IN_PROGRESS.md, LOGS/change-ledger.jsonl.
 - Evidence: official Ruff rule documentation and ShellCheck project documentation informed the small rule set. No external source code copied.
-- Unknown: new CI and target-environment behavior remain unverified.
-- Next: inspect CI, fix regressions, and keep a draft PR until target-environment tests are possible.
+- Unknown: Termux and other target virtual-Linux runtime behavior remain unverified.
+- Next: keep the PR draft until the latest CI run is green and target-environment smoke tests are possible.
+
+
+### AK-PROC-001 — Shared process supervision and consistency hardening
+
+- **Scope:** route workflow subprocesses through one bounded runner; distinguish PASS, FAIL, TIMEOUT, UNAVAILABLE and LIMIT; terminate process groups on POSIX timeout; close pipes; cap output and source scans; avoid symlink traversal; and test incomplete-report semantics.
+- **Regression coverage:** argv is passed without shell interpolation; timeouts differ from exit failures; missing executables are not passes; stdout is drained but only a bounded tail retained; child-process group cleanup; symlink discovery; empty target semantics; byte/file/finding/report-output limits; and timeout propagation into lint/watcher status.
+- **Latest confirmed hosted result before the newest output-reporting refinement:** GitHub Actions run 40154904648 passed 88 tests plus compilation, POSIX shell syntax, provenance and Markdown-link checks. Newest commit is still awaiting its own CI result.
+- **Unverified:** Termux and other target virtual-Linux process behavior. POSIX process-group termination is not a sandbox and cannot guarantee cleanup of descendants that deliberately detach into a new session.

@@ -157,3 +157,14 @@ python3 TOOLS/AgentKit/agentkit_lint.py shell --dialect sh TOOLS/AgentKit/agentk
 ```
 
 The fallback intentionally has no third-party dependencies and does not download/install anything. Its Python rules use `ast`; its shell rules are conservative line heuristics and do not parse full shell grammar. Upstream Ruff/ShellCheck remain preferred whenever present. Native fallback findings cause `lint-python` / `audit-shell` to fail so they cannot silently pass CI; distinguish warnings from syntax errors in the JSON report. Tests cover both rule behavior and false-positive boundaries.
+
+
+### Shared process supervision and result consistency
+
+The workflow tools now share a standard-library process supervisor. It invokes argv arrays without a shell, disables stdin, drains stdout and stderr concurrently, retains a bounded tail of each stream, closes both pipe objects, and reports timeout, launch failure, output-capture failure, and truncation explicitly. On POSIX, a timed-out command is started in its own session and its process group receives TERM followed by KILL. A deliberately detached descendant that creates a new session is outside that guarantee.
+
+Machine-readable status values have consistent meanings: PASS means the check completed with no detected issue; FAIL means an issue or command failure was observed; TIMEOUT means the overall deadline was reached; UNAVAILABLE means the required executable or a valid target set was unavailable; LIMIT means a scan, input, finding, or diagnostic-output budget prevented a complete report. A partial report must not be interpreted as a clean pass. Context search on an existing but empty/excluded-only directory is a valid zero-hit search; automatic lint scans with no eligible source files are unavailable instead.
+
+Discovery prunes common dependency/build directories, skips symlinks, and fails closed above 10,000 files. Static-analysis input is capped at 5 MB per file and 50 MB total; the fallback reports at most 500 findings. Ruff and ShellCheck calls are split into batches of up to 100 paths under one overall deadline. Watch snapshots have their own 10,000-file and 100 MB limits. These bounds are intentional; narrow a target instead of assuming a partial scan was complete.
+
+The process runner follows Python's subprocess API and cleanup cautions: [Python 3.12 subprocess documentation](https://docs.python.org/3.12/library/subprocess.html). Ruff's supported check options are documented in [Ruff configuration and CLI documentation](https://docs.astral.sh/ruff/configuration/). ShellCheck remains the preferred shell analyzer; see the [ShellCheck upstream project](https://github.com/koalaman/shellcheck#readme). None of these native fallbacks claim feature parity with the upstream analyzers.

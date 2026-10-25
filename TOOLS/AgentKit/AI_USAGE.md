@@ -79,3 +79,18 @@ These are reference candidates, not vendored dependencies. Check the current rep
 - Prefer upstream tools when available. The native fallback is a bounded subset, not a compatibility clone; its report must preserve that distinction.
 - For changes to fallback logic, add tests for both detection and non-detection cases (e.g. quoted variables, assignment contexts, `__init__.py` re-exports), then run `python3 -m unittest discover -s TOOLS/AgentKit/tests -v`.
 - For resource/path logic, test root escape rejection, symlink boundaries, output/byte budgets, timeout behavior, and read-only guarantees. Hosted CI is not a substitute for Termux or target virtual-Linux smoke tests.
+
+
+## Shared process supervision and status semantics
+
+AgentKit's workflow tools use one subprocess supervisor instead of maintaining separate timeout and output-capture implementations. It passes argument vectors without shell interpolation, drains each output stream while the child runs, retains only bounded output tails, closes pipes, and separates normal failure from timeout and launch unavailability. POSIX timeouts terminate the command's process group; intentionally detached descendants are not guaranteed to be terminated.
+
+- PASS: the check completed without detected issues.
+- FAIL: a check or command reported a problem.
+- TIMEOUT: the configured total deadline elapsed.
+- UNAVAILABLE: the required executable or a valid automatic target set was not available.
+- LIMIT: the scan/input/diagnostic budget prevented a complete report.
+
+Symlinks and dependency/build directories are pruned during automatic discovery. Static analysis is limited to 10,000 files, 5 MB per file and 50 MB aggregate source bytes; fallback findings are capped at 500. Ruff and ShellCheck are executed in batches of at most 100 paths under one total deadline. The watcher snapshot has its own 10,000-file / 100 MB budget. Treat LIMIT as incomplete, never as a clean result.
+
+Hosted evidence: workflow run 40154904648 passed 88 unit tests along with Python compilation, POSIX shell syntax, provenance, and local Markdown-link checks at commit 9e6814ef66678ba90b355beeebd103c437bf7f35. Subsequent output-reporting edits are being revalidated by CI. Termux/device tests are still separate and unverified.
