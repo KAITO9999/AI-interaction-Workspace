@@ -29,3 +29,15 @@ Current status: implementation is on branch `work/agentkit-mobile-profiles`; Git
 - **Checks run:** final hosted CI run [40137923343](https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/40137923343) passed Python compilation, POSIX shell syntax, 57 unit tests, change-ledger provenance, and Markdown-link checks on Ubuntu. Earlier failed runs exposed a missing CLI dispatcher and test expectation mismatch; both were fixed and regression-tested. No direct local GPT-container or Termux execution is claimed.
 - **Classification:** FACT — files were committed to the feature branch. UNKNOWN — full CI outcome and behavior under target Termux/other virtual Linux environments.
 - **Next action:** review draft PR [#15](https://github.com/KAITO9999/AI-interaction-Workspace/pull/15), then smoke-test on Termux and another virtual Linux environment when available; keep environment-specific results separate from hosted CI evidence.
+
+
+### AK-LINT-001 — Native static-analysis fallback
+
+- Status: implementation drafted; hosted CI pending.
+- Actor: AI; work mode: online.
+- Scope: add dependency-free AST checks for Python and limited shell heuristics when Ruff/ShellCheck are absent, integrate them into existing commands, and add tests for rules, false-positive boundaries, path containment, resource limits and timeout behavior.
+- Compatibility: official tools remain preferred; fallback is a limited subset and is not equivalent.
+- Paths: TOOLS/AgentKit/agentkit_lint.py, TOOLS/AgentKit/tests/test_agentkit_lint.py, TOOLS/AgentKit/tests/test_agentkit_logic.py, TOOLS/AgentKit/agentkit_work.py, .github/workflows/agentkit-tests.yml, TOOLS/AgentKit/README.md, TOOLS/AgentKit/AI_USAGE.md, PROJECTS/AgentKit/IN_PROGRESS.md, LOGS/change-ledger.jsonl.
+- Evidence: official Ruff rule documentation and ShellCheck project documentation informed the small rule set. No external source code copied.
+- Unknown: new CI and target-environment behavior remain unverified.
+- Next: inspect CI, fix regressions, and keep a draft PR until target-environment tests are possible.
