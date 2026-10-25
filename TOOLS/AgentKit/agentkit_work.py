@@ -525,9 +525,14 @@ def context_inspect(root: Path, target: str, start: int | None, end: int | None,
     if discovery_limited:
         return {"summary": "Context scan limit exceeded", "status": "LIMIT", "matches": [],
                 "errors": [f"more than {MAX_SCAN_FILES} files under target; narrow the target set"]}
+    if not candidates and target_path.is_dir():
+        return {"summary": "Context inspection complete", "status": "PASS", "root": str(root),
+                "matches": [], "files_scanned_bytes": 0, "truncated": False,
+                "limits": {"max_lines": max_lines, "max_bytes": max_bytes},
+                "errors": [], "read_only": True}
     if not candidates:
         return {"summary": "No matching target files", "status": "UNAVAILABLE", "matches": [],
-                "errors": [f"target does not exist or contains no eligible files: {target_path}"]}
+                "errors": [f"target does not exist: {target_path}"]}
     compiled = None
     if pattern is not None and regex:
         try:

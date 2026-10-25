@@ -10,6 +10,8 @@ import zipfile
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "agentkit_work.py"
+sys.path.insert(0, str(SCRIPT.parent))
+import agentkit_work
 
 
 def run(*args, cwd=None, env=None, timeout=15):

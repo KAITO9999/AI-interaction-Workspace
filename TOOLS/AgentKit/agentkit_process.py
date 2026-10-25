@@ -86,13 +86,15 @@ def _terminate_process_tree(
 def _join_readers(threads: list[threading.Thread], streams: tuple[object, object]) -> None:
     for thread in threads:
         thread.join(timeout=1.0)
-    for thread, stream in zip(threads, streams):
-        if thread.is_alive():
-            try:
-                stream.close()  # type: ignore[attr-defined]
-            except OSError:
-                pass
-            thread.join(timeout=0.2)
+    # Close both pipe objects even when their reader threads already exited.
+    # A stuck reader is unblocked by closing its descriptor before the final join.
+    for stream in streams:
+        try:
+            stream.close()  # type: ignore[attr-defined]
+        except OSError:
+            pass
+    for thread in threads:
+        thread.join(timeout=0.2)
 
 
 def run_process(
