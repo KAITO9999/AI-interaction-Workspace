@@ -10,10 +10,11 @@ import argparse
 import hashlib
 import json
 import os
-import subprocess
 import sys
 import time
 from pathlib import Path
+
+from agentkit_process import process_status, run_process
 
 SKIP_DIRS = {".git", ".hg", ".svn", "node_modules", ".venv", "venv", "__pycache__", "target", "dist", "build", ".next", ".cache"}
 MAX_FILES = 10000
@@ -21,10 +22,29 @@ MAX_TOTAL_BYTES = 100 * 1024 * 1024
 OUTPUT_LIMIT = 12000
 
 
+def _iter_watch_files(start: Path, root: Path):
+    for current, directories, filenames in os.walk(start, topdown=True, followlinks=False):
+        current_path = Path(current)
+        directories[:] = sorted(
+            name for name in directories
+            if name not in SKIP_DIRS and not (current_path / name).is_symlink()
+        )
+        for name in sorted(filenames):
+            candidate = current_path / name
+            if candidate.is_symlink():
+                continue
+            try:
+                if candidate.is_file():
+                    candidate.resolve().relative_to(root)
+                    yield candidate
+            except (OSError, ValueError):
+                continue
+
+
 def snapshot(root: Path, watched: list[str]) -> tuple[str, dict[str, str], dict[str, str]]:
-    """Return a deterministic digest, per-file digests, and scan warnings."""
+    """Return a deterministic bounded digest, per-file hashes and scan warnings."""
     root = root.resolve()
-    files: list[Path] = []
+    files: set[Path] = set()
     warnings: dict[str, str] = {}
     for raw in watched:
         lexical_path = Path(raw).expanduser()
@@ -40,33 +60,30 @@ def snapshot(root: Path, watched: list[str]) -> tuple[str, dict[str, str], dict[
             warnings[raw] = "path escapes root"
             continue
         if path.is_file():
-            files.append(path)
+            files.add(path)
         elif path.is_dir():
-            for candidate in path.rglob("*"):
-                try:
-                    rel = candidate.relative_to(root)
-                    if any(part in SKIP_DIRS for part in rel.parts) or candidate.is_symlink():
-                        continue
-                    if candidate.is_file():
-                        resolved = candidate.resolve()
-                        resolved.relative_to(root)
-                        files.append(candidate)
-                except (OSError, ValueError):
-                    continue
+            for candidate in _iter_watch_files(path, root):
+                files.add(candidate)
+                if len(files) > MAX_FILES:
+                    warnings["scan"] = f"file limit exceeded (> {MAX_FILES}); snapshot rejected"
+                    return "", {}, warnings
         else:
             warnings[raw] = "path does not exist"
-    files = sorted(set(files))
-    if len(files) > MAX_FILES:
-        warnings["scan"] = f"file limit exceeded ({len(files)} > {MAX_FILES}); snapshot rejected"
+    ordered_files = sorted(files)
+    if len(ordered_files) > MAX_FILES:
+        warnings["scan"] = f"file limit exceeded ({len(ordered_files)} > {MAX_FILES}); snapshot rejected"
         return "", {}, warnings
     per_file: dict[str, str] = {}
     total = 0
-    for path in files:
+    for path in ordered_files:
         try:
             size = path.stat().st_size
             remaining = MAX_TOTAL_BYTES - total
             if size > remaining:
-                warnings["scan"] = f"byte limit exceeded by {path.relative_to(root).as_posix()} ({size} > remaining {remaining}); snapshot rejected"
+                warnings["scan"] = (
+                    f"byte limit exceeded by {path.relative_to(root).as_posix()} "
+                    f"({size} > remaining {remaining}); snapshot rejected"
+                )
                 return "", {}, warnings
             digest = hashlib.sha256()
             read_size = 0
@@ -82,33 +99,28 @@ def snapshot(root: Path, watched: list[str]) -> tuple[str, dict[str, str], dict[
                     digest.update(chunk)
             total += read_size
             per_file[path.relative_to(root).as_posix()] = digest.hexdigest()
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             warnings[path.relative_to(root).as_posix()] = f"{type(exc).__name__}: {exc}"
-    combined = hashlib.sha256(json.dumps(per_file, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    combined = hashlib.sha256(
+        json.dumps(per_file, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
     return combined, per_file, warnings
 
 
 def run_check(command: list[str], root: Path, timeout: int) -> dict[str, object]:
-    started = time.monotonic()
-    try:
-        result = subprocess.run(command, cwd=str(root), capture_output=True, text=True,
-                                errors="replace", timeout=timeout, check=False)
-        return {"status": "PASS" if result.returncode == 0 else "FAIL",
-                "returncode": result.returncode, "stdout": result.stdout[-OUTPUT_LIMIT:],
-                "stderr": result.stderr[-OUTPUT_LIMIT:],
-                "duration_seconds": round(time.monotonic() - started, 3), "timed_out": False}
-    except subprocess.TimeoutExpired as exc:
-        def decode(value: str | bytes | None) -> str:
-            if value is None:
-                return ""
-            return value.decode("utf-8", "replace") if isinstance(value, bytes) else value
-        return {"status": "TIMEOUT", "returncode": 124, "stdout": decode(exc.stdout)[-OUTPUT_LIMIT:],
-                "stderr": (decode(exc.stderr) + f"\nTIMEOUT after {timeout}s")[-OUTPUT_LIMIT:],
-                "duration_seconds": round(time.monotonic() - started, 3), "timed_out": True}
-    except OSError as exc:
-        return {"status": "UNAVAILABLE", "returncode": 127, "stdout": "",
-                "stderr": f"{type(exc).__name__}: {exc}", "duration_seconds": round(time.monotonic() - started, 3),
-                "timed_out": False}
+    result = run_process(command, cwd=root, timeout=timeout, output_limit=OUTPUT_LIMIT)
+    return {
+        "status": process_status(result),
+        "returncode": result["returncode"],
+        "stdout": result["stdout"],
+        "stderr": result["stderr"],
+        "duration_seconds": result["duration_seconds"],
+        "timed_out": result["timed_out"],
+        "launch_error": result.get("launch_error"),
+        "capture_error": result.get("capture_error"),
+        "stdout_truncated": result.get("stdout_truncated", False),
+        "stderr_truncated": result.get("stderr_truncated", False),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:

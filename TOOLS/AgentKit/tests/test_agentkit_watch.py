@@ -49,5 +49,19 @@ class AgentKitWatchTests(unittest.TestCase):
         self.assertIn("--watch", result.stdout)
 
 
+    def test_timeout_status_is_preserved_in_watcher_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "src").mkdir()
+            result = run("--root", directory, "--watch", "src", "--max-runs", "1",
+                         "--timeout", "1", "--json", "--", sys.executable, "-c",
+                         "import time; time.sleep(5)")
+            self.assertEqual(result.returncode, 1)
+            report = json.loads(result.stdout.splitlines()[0])
+            self.assertEqual(report["status"], "TIMEOUT")
+            self.assertEqual(report["returncode"], 124)
+            self.assertTrue(report["timed_out"])
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
