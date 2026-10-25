@@ -11,8 +11,10 @@ import math
 import os
 import signal
 import subprocess
+import sys
 import threading
 import time
+from typing import Callable
 from pathlib import Path
 from typing import Sequence
 
@@ -37,7 +39,9 @@ def _capture_tail(
     state: dict[str, object],
     finished: threading.Event,
     limit: int,
+    passthrough: object | None = None,
 ) -> None:
+    last_byte = b""
     try:
         fd = stream.fileno()  # type: ignore[attr-defined]
         while True:
@@ -45,12 +49,27 @@ def _capture_tail(
             if not chunk:
                 break
             state["total"] = int(state["total"]) + len(chunk)
+            state["lines"] = int(state["lines"]) + chunk.count(b"\n")
+            last_byte = chunk[-1:]
             retained.extend(chunk)
             if len(retained) > limit:
                 del retained[:-limit]
+            if passthrough is not None:
+                try:
+                    buffer = getattr(passthrough, "buffer", None)
+                    if buffer is not None:
+                        buffer.write(chunk)
+                        buffer.flush()
+                    else:
+                        passthrough.write(chunk.decode("utf-8", errors="replace"))  # type: ignore[attr-defined]
+                        passthrough.flush()  # type: ignore[attr-defined]
+                except (OSError, UnicodeError, ValueError) as exc:
+                    state["stream_error"] = f"{type(exc).__name__}: {exc}"
+                    passthrough = None
     except OSError as exc:
         state["read_error"] = f"{type(exc).__name__}: {exc}"
     finally:
+        state["lines"] = int(state["lines"]) + (1 if int(state["total"]) and last_byte != b"\n" else 0)
         finished.set()
 
 
@@ -103,6 +122,9 @@ def run_process(
     cwd: Path | str | None = None,
     output_limit: int = DEFAULT_OUTPUT_LIMIT,
     terminate_grace: float = DEFAULT_TERMINATE_GRACE,
+    stream_output: bool = False,
+    on_progress: Callable[[float, float], None] | None = None,
+    progress_interval: float = 1.0,
 ) -> dict[str, object]:
     """Run one command with a deadline, bounded output tails and explicit status.
 
@@ -122,6 +144,8 @@ def run_process(
         raise ValueError("output_limit must be positive")
     if not math.isfinite(terminate_grace) or terminate_grace < 0:
         raise ValueError("terminate_grace must be finite and non-negative")
+    if not math.isfinite(progress_interval) or progress_interval <= 0:
+        raise ValueError("progress_interval must be finite and positive")
 
     command = list(argv)
     started = time.monotonic()
@@ -154,8 +178,8 @@ def run_process(
 
     stdout_buffer = bytearray()
     stderr_buffer = bytearray()
-    stdout_state: dict[str, object] = {"total": 0, "read_error": None}
-    stderr_state: dict[str, object] = {"total": 0, "read_error": None}
+    stdout_state: dict[str, object] = {"total": 0, "lines": 0, "read_error": None, "stream_error": None}
+    stderr_state: dict[str, object] = {"total": 0, "lines": 0, "read_error": None, "stream_error": None}
     stdout_done = threading.Event()
     stderr_done = threading.Event()
     assert process.stdout is not None and process.stderr is not None
@@ -163,12 +187,14 @@ def run_process(
     threads = [
         threading.Thread(
             target=_capture_tail,
-            args=(process.stdout, stdout_buffer, stdout_state, stdout_done, output_limit),
+            args=(process.stdout, stdout_buffer, stdout_state, stdout_done, output_limit,
+                  sys.stdout if stream_output else None),
             daemon=True,
         ),
         threading.Thread(
             target=_capture_tail,
-            args=(process.stderr, stderr_buffer, stderr_state, stderr_done, output_limit),
+            args=(process.stderr, stderr_buffer, stderr_state, stderr_done, output_limit,
+                  sys.stderr if stream_output else None),
             daemon=True,
         ),
     ]
@@ -177,13 +203,18 @@ def run_process(
 
     timed_out = False
     deadline = started + timeout
+    next_progress = started + progress_interval
     try:
         while True:
             process_done = process.poll() is not None
             streams_done = stdout_done.is_set() and stderr_done.is_set()
             if process_done and streams_done:
                 break
-            remaining = deadline - time.monotonic()
+            now = time.monotonic()
+            remaining = deadline - now
+            if on_progress is not None and now >= next_progress and not process_done:
+                on_progress(now - started, max(0.0, remaining))
+                next_progress = now + progress_interval
             if remaining <= 0:
                 timed_out = True
                 _terminate_process_tree(process, terminate_grace)
@@ -197,7 +228,8 @@ def run_process(
     _join_readers(threads, streams)
     capture_errors = [
         str(value)
-        for value in (stdout_state.get("read_error"), stderr_state.get("read_error"))
+        for state in (stdout_state, stderr_state)
+        for value in (state.get("read_error"), state.get("stream_error"))
         if value
     ]
     capture_error = "; ".join(capture_errors) or None
@@ -219,6 +251,11 @@ def run_process(
         "capture_error": capture_error,
         "stdout_truncated": int(stdout_state["total"]) > output_limit,
         "stderr_truncated": int(stderr_state["total"]) > output_limit,
+        "stdout_total_bytes": int(stdout_state["total"]),
+        "stderr_total_bytes": int(stderr_state["total"]),
+        "stdout_line_count": int(stdout_state["lines"]),
+        "stderr_line_count": int(stderr_state["lines"]),
+        "stream_output": stream_output,
     }
     result["status"] = process_status(result)
     return result
