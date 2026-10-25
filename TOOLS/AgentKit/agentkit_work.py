@@ -505,14 +505,29 @@ def context_inspect(root: Path, target: str, start: int | None, end: int | None,
         return {"summary": "Context inspection rejected line range", "matches": [], "errors": ["line numbers must be >= 1"]}
     if start is not None and end is not None and start > end:
         return {"summary": "Context inspection rejected line range", "matches": [], "errors": ["start must be <= end"]}
-    target_path = (root / target).resolve()
+    lexical_target = Path(target).expanduser()
+    if not lexical_target.is_absolute():
+        lexical_target = root / lexical_target
+    if lexical_target.is_symlink():
+        return {"summary": "Context inspection rejected symlink", "status": "FAIL", "matches": [],
+                "errors": [f"symlink targets are not inspected: {target}"]}
+    target_path = lexical_target.resolve()
     try:
         target_path.relative_to(root)
     except ValueError:
-        return {"summary": "Context inspection rejected path", "matches": [], "errors": [f"path escapes root: {target}"]}
-    candidates = [target_path] if target_path.is_file() else sorted(target_path.rglob("*")) if target_path.is_dir() else []
+        return {"summary": "Context inspection rejected path", "status": "FAIL", "matches": [], "errors": [f"path escapes root: {target}"]}
+    if target_path.is_file():
+        candidates, discovery_limited = [target_path], False
+    elif target_path.is_dir():
+        candidates, discovery_limited = _discover_files(target_path, root, "", MAX_SCAN_FILES)
+    else:
+        candidates, discovery_limited = [], False
+    if discovery_limited:
+        return {"summary": "Context scan limit exceeded", "status": "LIMIT", "matches": [],
+                "errors": [f"more than {MAX_SCAN_FILES} files under target; narrow the target set"]}
     if not candidates:
-        return {"summary": "No matching target files", "matches": [], "errors": [f"target does not exist: {target_path}"]}
+        return {"summary": "No matching target files", "status": "UNAVAILABLE", "matches": [],
+                "errors": [f"target does not exist or contains no eligible files: {target_path}"]}
     compiled = None
     if pattern is not None and regex:
         try:
@@ -567,7 +582,7 @@ def context_inspect(root: Path, target: str, start: int | None, end: int | None,
                 break
         if truncated:
             break
-    return {"summary": "Context inspection complete", "root": str(root), "matches": matches,
+    return {"summary": "Context inspection complete", "status": "PASS", "root": str(root), "matches": matches,
             "files_scanned_bytes": bytes_seen, "truncated": truncated,
             "limits": {"max_lines": max_lines, "max_bytes": max_bytes},
             "errors": [], "read_only": True}
@@ -637,8 +652,25 @@ def main(argv: list[str] | None = None) -> int:
         report = args.handler(args)
     except KeyboardInterrupt:
         report = {"summary": "Interrupted; no automatic retry", "checks": [], "errors": ["interrupted"]}
+    status = report.get("status")
+    if status is None:
+        check_statuses = [check.get("status") for check in report.get("checks", [])]
+        if "TIMEOUT" in check_statuses:
+            status = "TIMEOUT"
+        elif "UNAVAILABLE" in check_statuses:
+            status = "UNAVAILABLE"
+        elif "LIMIT" in check_statuses or any(item.get("status") == "LIMIT" for item in report.get("artifacts", [])):
+            status = "LIMIT"
+        elif report.get("errors") or "FAIL" in check_statuses:
+            summary = str(report.get("summary", "")).lower()
+            status = "UNAVAILABLE" if "unavailable" in summary or summary.startswith("no ") else "FAIL"
+        elif str(report.get("summary", "")).startswith("No "):
+            status = "UNAVAILABLE"
+        else:
+            status = "PASS"
+    report["status"] = status
     emit(report, args.json)
-    return 1 if report.get("errors") or any(c.get("status") == "FAIL" for c in report.get("checks", [])) else 0
+    return 0 if status == "PASS" else 1
 
 
 if __name__ == "__main__":
