@@ -64,4 +64,17 @@ class AgentKitTests(unittest.TestCase):
             self.assertIn("診断用バッファ",r.stdout)
 
 
+
+    def test_versions_probe_timeout_is_bounded_and_reported_unknown(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fake = Path(directory, "git")
+            fake.write_text(f"#!{sys.executable}\nimport time\ntime.sleep(5)\n", encoding="utf-8")
+            fake.chmod(0o755)
+            env = os.environ.copy(); env["PATH"] = directory
+            r = run("versions", "--root", directory, env=env, timeout=5)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("| git |", r.stdout)
+            self.assertIn("| unknown |", r.stdout)
+
+
 if __name__=="__main__": unittest.main(verbosity=2)

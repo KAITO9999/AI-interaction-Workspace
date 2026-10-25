@@ -7,7 +7,6 @@ import datetime as dt
 import json
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 from agentkit_process import run_process
@@ -191,12 +190,13 @@ def compile_typescript(args: argparse.Namespace) -> int:
 
 
 def git_value(root: Path, *arguments: str) -> str | None:
-    try:
-        result = subprocess.run(["git", *arguments], cwd=root, capture_output=True, text=True, timeout=2, check=False)
-    except (OSError, subprocess.TimeoutExpired):
+    result = run_process(
+        ["git", *arguments], cwd=root, timeout=2, output_limit=1000
+    )
+    if result["status"] != "PASS" or result.get("stdout_truncated"):
         return None
-    value = result.stdout.strip()
-    return value if result.returncode == 0 and value else None
+    value = str(result["stdout"]).strip()
+    return value or None
 
 
 def record_change(args: argparse.Namespace) -> int:

@@ -145,8 +145,8 @@ def timer(a):
 def versions(a):
     commands,formats=caps(); lines=["# AgentKit Capability Table","",f"AgentKit: {VERSION}",f"Generated local: {now().isoformat(timespec='seconds')}",f"Generated UTC: {dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')}",f"Root: {Path(a.root).expanduser().resolve()}","","## Commands","","| Command | Path | Version (best effort) |","|---|---|---|"]
     for c in commands:
-        try: v=subprocess.run([c["name"],"--version"],capture_output=True,text=True,timeout=2).stdout.strip().splitlines()
-        except Exception: v=[]
+        result = run_process([c["name"], "--version"], timeout=2, output_limit=1000)
+        v = str(result["stdout"]).strip().splitlines() if result["status"] == "PASS" and not result.get("stdout_truncated") else []
         lines.append(f"| {c['name']} | {c['path']} | {(v or ['unknown'])[0][:120]} |")
     lines += ["","## Format capability hints","","| Format | Available | Tools |","|---|---|---|"]
     for ext,v in formats.items(): lines.append(f"| {ext} | {'yes' if v['available'] else 'no'} | {', '.join(v['tools']) or 'none'} |")
