@@ -41,7 +41,7 @@ class NativeStaticAnalysisTests(unittest.TestCase):
         self.assertEqual(findings, [])
 
     def test_shell_command_substitution_and_export_status_pitfall_are_detected(self):
-        findings = agentkit_lint.lint_shell_source('files=$(find . -name "*.py")\nexport RESULT=$(tool)\n')
+        findings = agentkit_lint.lint_shell_source('echo $(find . -name "*.py")\nexport RESULT=$(tool)\n')
         rules = [item["rule"] for item in findings]
         self.assertIn("SC2046", rules)
         self.assertIn("SC2155", rules)
