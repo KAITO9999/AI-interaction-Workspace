@@ -171,110 +171,213 @@ def repo_check(root: Path, timeout: int) -> dict[str, Any]:
 def lint_python(root: Path, files: list[str], timeout: int) -> dict[str, Any]:
     root = root.expanduser().resolve()
     if not root.is_dir():
-        return {"summary": "Python lint unavailable", "checks": [], "errors": [f"root is not a directory: {root}"]}
+        return {"summary": "Python lint unavailable", "status": "UNAVAILABLE", "checks": [],
+                "errors": [f"root is not a directory: {root}"]}
     candidates: list[Path] = []
     if files:
         for raw in files:
-            path = (root / raw).resolve()
+            lexical = Path(raw).expanduser()
+            if not lexical.is_absolute():
+                lexical = root / lexical
+            if lexical.is_symlink():
+                return {"summary": "Python lint rejected symlink", "status": "FAIL", "checks": [],
+                        "errors": [f"symlink input is not allowed: {raw}"]}
+            path = lexical.resolve()
             try:
                 path.relative_to(root)
             except ValueError:
-                return {"summary": "Python lint rejected path", "checks": [], "errors": [f"path escapes root: {raw}"]}
+                return {"summary": "Python lint rejected path", "status": "FAIL", "checks": [],
+                        "errors": [f"path escapes root: {raw}"]}
             if not path.is_file() or path.suffix != ".py":
-                return {"summary": "Python lint rejected input", "checks": [], "errors": [f"not an existing .py file: {raw}"]}
+                return {"summary": "Python lint rejected input", "status": "FAIL", "checks": [],
+                        "errors": [f"not an existing .py file: {raw}"]}
             candidates.append(path)
     else:
-        for path in root.rglob("*.py"):
-            if any(part in SKIP_DIRS for part in path.relative_to(root).parts):
-                continue
-            candidates.append(path)
-    candidates.sort()
+        candidates, scan_limited = _discover_files(root, root, ".py")
+        if scan_limited:
+            return {"summary": "Python lint scan limit exceeded", "status": "LIMIT", "checks": [],
+                    "errors": [f"more than {MAX_SCAN_FILES} Python files; narrow the target set"]}
+    candidates = sorted(set(candidates))
     if not candidates:
-        return {"summary": "No Python files found", "checks": [], "errors": []}
+        return {"summary": "No eligible Python files found", "status": "UNAVAILABLE", "checks": [],
+                "errors": ["no non-symlink Python files found under the selected root"]}
+    budget_error = _source_budget_error(candidates)
+    if budget_error:
+        return {"summary": "Python lint input limit exceeded", "status": "LIMIT", "checks": [],
+                "errors": [budget_error], "file_count": len(candidates)}
     ruff = shutil.which("ruff")
     if ruff:
-        result = run_argv([ruff, "check", "--output-format", "concise", *[str(p) for p in candidates]], timeout, root)
-        return {"summary": "Ruff lint completed", "tool": "ruff", "equivalence": "native-linter",
-                "checks": [{"name": "ruff-check", "status": "PASS" if result["returncode"] == 0 else "FAIL",
-                            "returncode": result["returncode"], "stdout": result["stdout"][:30000],
-                            "stderr": result["stderr"][:6000], "timed_out": result["timed_out"]}],
-                "errors": [], "file_count": len(candidates)}
+        result = _run_file_batches(ruff, ["check", "--output-format", "concise"], candidates, timeout, root)
+        status = result["status"]
+        return {"summary": "Ruff lint completed", "status": status, "tool": "ruff",
+                "equivalence": "native-linter",
+                "checks": [{"name": "ruff-check", "status": status,
+                            "returncode": result["returncode"], "stdout": result["stdout"],
+                            "stderr": result["stderr"], "timed_out": result["timed_out"],
+                            "launch_error": result["launch_error"],
+                            "stdout_truncated": result["stdout_truncated"],
+                            "stderr_truncated": result["stderr_truncated"],
+                            "duration_seconds": result["duration_seconds"],
+                            "batch_count": result["batch_count"]}],
+                "errors": [result["launch_error"]] if result["launch_error"] else [],
+                "file_count": len(candidates), "batch_count": result["batch_count"]}
     reports = []
     read_errors = []
+    total_read = 0
+    remaining_findings = MAX_REPORTED_FINDINGS
+    findings_truncated = False
     for path in candidates:
         try:
-            findings = lint_python_source(path.read_text(encoding="utf-8"), str(path))
-            reports.append({"file": str(path.relative_to(root)), "findings": findings})
+            with path.open("rb") as handle:
+                raw = handle.read(MAX_SOURCE_FILE_BYTES + 1)
+            if len(raw) > MAX_SOURCE_FILE_BYTES:
+                read_errors.append(f"{path}: source file exceeds {MAX_SOURCE_FILE_BYTES} byte limit")
+                continue
+            total_read += len(raw)
+            if total_read > MAX_TOTAL_SOURCE_BYTES:
+                read_errors.append(f"source set exceeds {MAX_TOTAL_SOURCE_BYTES} byte aggregate limit")
+                break
+            findings = lint_python_source(raw.decode("utf-8"), str(path))
+            kept = findings[:remaining_findings]
+            remaining_findings -= len(kept)
+            if len(kept) != len(findings):
+                findings_truncated = True
+            reports.append({"file": str(path.relative_to(root)), "findings": kept})
         except (OSError, UnicodeError) as exc:
             read_errors.append(f"{path}: {type(exc).__name__}: {exc}")
     has_findings = any(report["findings"] for report in reports)
-    has_syntax_error = any(finding["rule"] == "PY-SYNTAX"
-                           for report in reports for finding in report["findings"])
-    status = "FAIL" if has_findings or read_errors else "PASS"
-    return {"summary": "Python native static checks completed",
+    limit_failure = any("limit" in error.lower() or "exceeds" in error.lower() for error in read_errors)
+    status = "LIMIT" if limit_failure or findings_truncated else "FAIL" if has_findings or read_errors else "PASS"
+    warnings = ["ruff not found; only syntax, unused imports, bare except and mutable literal defaults are checked"]
+    if findings_truncated:
+        warnings.append(f"reported findings capped at {MAX_REPORTED_FINDINGS}")
+    return {"summary": "Python native static checks completed", "status": status,
             "tool": "AgentKit AST checks", "equivalence": "limited AST rules; NOT Ruff-equivalent",
             "checks": [{"name": "python-native-lint", "status": status,
-                        "returncode": 1 if status == "FAIL" else 0,
-                        "stdout": json.dumps(reports, ensure_ascii=False)[:30000],
-                        "stderr": "\\n".join(read_errors)[:6000], "timed_out": False}],
-            "warnings": ["ruff not found; only syntax, unused imports, bare except and mutable literal defaults are checked"],
-            "errors": read_errors, "file_count": len(candidates), "findings": reports}
+                        "returncode": 1 if status != "PASS" else 0,
+                        "stdout": json.dumps(reports, ensure_ascii=False)[-PROCESS_OUTPUT_LIMIT:],
+                        "stderr": "\n".join(read_errors)[-6000:], "timed_out": False,
+                        "findings_truncated": findings_truncated}],
+            "warnings": warnings, "errors": read_errors, "file_count": len(candidates),
+            "findings": reports, "findings_truncated": findings_truncated}
 
 
 def audit_shell(root: Path, files: list[str], dialect: str, timeout: int) -> dict[str, Any]:
     root = root.expanduser().resolve()
+    if not root.is_dir():
+        return {"summary": "Shell audit unavailable", "status": "UNAVAILABLE", "checks": [],
+                "errors": [f"root is not a directory: {root}"]}
     if dialect not in {"sh", "bash"}:
-        return {"summary": "Shell audit rejected dialect", "checks": [], "errors": ["dialect must be sh or bash"]}
+        return {"summary": "Shell audit rejected dialect", "status": "FAIL", "checks": [],
+                "errors": ["dialect must be sh or bash"]}
     candidates: list[Path] = []
     if files:
         for raw in files:
-            path = (root / raw).resolve()
+            lexical = Path(raw).expanduser()
+            if not lexical.is_absolute():
+                lexical = root / lexical
+            if lexical.is_symlink():
+                return {"summary": "Shell audit rejected symlink", "status": "FAIL", "checks": [],
+                        "errors": [f"symlink input is not allowed: {raw}"]}
+            path = lexical.resolve()
             try:
                 path.relative_to(root)
             except ValueError:
-                return {"summary": "Shell audit rejected path", "checks": [], "errors": [f"path escapes root: {raw}"]}
+                return {"summary": "Shell audit rejected path", "status": "FAIL", "checks": [],
+                        "errors": [f"path escapes root: {raw}"]}
             if not path.is_file():
-                return {"summary": "Shell audit rejected input", "checks": [], "errors": [f"not a file: {raw}"]}
+                return {"summary": "Shell audit rejected input", "status": "FAIL", "checks": [],
+                        "errors": [f"not a file: {raw}"]}
             candidates.append(path)
     else:
-        for path in root.rglob("*.sh"):
-            if any(part in SKIP_DIRS for part in path.relative_to(root).parts):
-                continue
-            candidates.append(path)
-    candidates.sort()
+        candidates, scan_limited = _discover_files(root, root, ".sh")
+        if scan_limited:
+            return {"summary": "Shell audit scan limit exceeded", "status": "LIMIT", "checks": [],
+                    "errors": [f"more than {MAX_SCAN_FILES} shell scripts; narrow the target set"]}
+    candidates = sorted(set(candidates))
     if not candidates:
-        return {"summary": "No shell scripts found", "checks": [], "errors": []}
+        return {"summary": "No eligible shell scripts found", "status": "UNAVAILABLE", "checks": [],
+                "errors": ["no non-symlink shell scripts found under the selected root"]}
+    budget_error = _source_budget_error(candidates)
+    if budget_error:
+        return {"summary": "Shell audit input limit exceeded", "status": "LIMIT", "checks": [],
+                "errors": [budget_error], "file_count": len(candidates)}
     shellcheck = shutil.which("shellcheck")
     if shellcheck:
-        result = run_argv([shellcheck, "--shell=" + dialect, "--", *[str(p) for p in candidates]], timeout, root)
+        result = _run_file_batches(shellcheck, ["--shell=" + dialect, "--"], candidates, timeout, root)
+        status = result["status"]
         tool, equivalence = "shellcheck", "native-linter"
+        findings_truncated = False
     else:
         shell = shutil.which(dialect)
         if not shell:
-            return {"summary": "Shell audit unavailable", "checks": [], "errors": [f"neither shellcheck nor {dialect} is available"]}
+            return {"summary": "Shell audit unavailable", "status": "UNAVAILABLE", "checks": [],
+                    "errors": [f"neither shellcheck nor {dialect} is available"]}
         failures = []
         native_reports = []
+        started = time.monotonic()
+        timed_out = False
+        launch_error = None
+        total_read = 0
+        remaining_findings = MAX_REPORTED_FINDINGS
+        findings_truncated = False
         for path in candidates:
-            result_one = run_argv([shell, "-n", str(path)], timeout, root)
+            remaining = timeout - (time.monotonic() - started)
+            if remaining <= 0:
+                timed_out = True
+                failures.append({"file": str(path.relative_to(root)), "timed_out": True,
+                                 "error": f"total timeout of {timeout}s exhausted"})
+                break
+            result_one = run_argv([shell, "-n", str(path)], max(0.05, remaining), root)
             if result_one["returncode"] != 0:
                 failures.append({"file": str(path.relative_to(root)), "returncode": result_one["returncode"],
-                                 "stderr": result_one["stderr"][:2000], "timed_out": result_one["timed_out"]})
+                                 "stderr": result_one["stderr"][-2000:],
+                                 "timed_out": result_one["timed_out"],
+                                 "launch_error": result_one.get("launch_error")})
+            timed_out = timed_out or bool(result_one["timed_out"])
+            launch_error = launch_error or result_one.get("launch_error")
+            if timed_out or launch_error:
+                break
             try:
-                findings = lint_shell_source(path.read_text(encoding="utf-8"), dialect)
-                native_reports.append({"file": str(path.relative_to(root)), "findings": findings})
-            except (OSError, UnicodeError) as exc:
+                with path.open("rb") as handle:
+                    raw = handle.read(MAX_SOURCE_FILE_BYTES + 1)
+                if len(raw) > MAX_SOURCE_FILE_BYTES:
+                    raise ValueError(f"source file exceeds {MAX_SOURCE_FILE_BYTES} byte limit")
+                total_read += len(raw)
+                if total_read > MAX_TOTAL_SOURCE_BYTES:
+                    raise ValueError(f"source set exceeds {MAX_TOTAL_SOURCE_BYTES} byte aggregate limit")
+                findings = lint_shell_source(raw.decode("utf-8"), dialect)
+                kept = findings[:remaining_findings]
+                remaining_findings -= len(kept)
+                if len(kept) != len(findings):
+                    findings_truncated = True
+                native_reports.append({"file": str(path.relative_to(root)), "findings": kept})
+            except (OSError, UnicodeError, ValueError) as exc:
                 failures.append({"file": str(path.relative_to(root)), "error": f"{type(exc).__name__}: {exc}"})
+                break
         has_findings = any(report["findings"] for report in native_reports)
-        result = {"returncode": 1 if failures or has_findings else 0,
-                  "stdout": json.dumps(native_reports, ensure_ascii=False),
-                  "stderr": json.dumps(failures, ensure_ascii=False), "timed_out": False}
+        limit_failure = any("limit" in str(item).lower() or "exceeds" in str(item).lower() for item in failures)
+        status = ("TIMEOUT" if timed_out else "UNAVAILABLE" if launch_error
+                  else "LIMIT" if limit_failure or findings_truncated
+                  else "FAIL" if failures or has_findings else "PASS")
+        result = {"status": status,
+                  "returncode": 124 if timed_out else 127 if launch_error else 1 if failures or has_findings or findings_truncated else 0,
+                  "stdout": json.dumps(native_reports, ensure_ascii=False)[-PROCESS_OUTPUT_LIMIT:],
+                  "stderr": json.dumps(failures, ensure_ascii=False)[-8000:],
+                  "timed_out": timed_out, "launch_error": launch_error,
+                  "findings_truncated": findings_truncated}
         tool, equivalence = dialect + " -n + AgentKit rules", "syntax + limited heuristics; NOT ShellCheck-equivalent"
-    return {"summary": "Shell audit completed", "tool": tool, "equivalence": equivalence,
-            "checks": [{"name": "shell-audit", "status": "PASS" if result["returncode"] == 0 else "FAIL",
-                        "returncode": result["returncode"], "stdout": result.get("stdout", "")[:30000],
-                        "stderr": result.get("stderr", "")[:8000], "timed_out": result.get("timed_out", False)}],
+    return {"summary": "Shell audit completed", "status": status, "tool": tool, "equivalence": equivalence,
+            "checks": [{"name": "shell-audit", "status": status,
+                        "returncode": result["returncode"], "stdout": result.get("stdout", "")[-PROCESS_OUTPUT_LIMIT:],
+                        "stderr": result.get("stderr", "")[-8000:], "timed_out": result.get("timed_out", False),
+                        "launch_error": result.get("launch_error"),
+                        "stdout_truncated": result.get("stdout_truncated", False),
+                        "stderr_truncated": result.get("stderr_truncated", False),
+                        "findings_truncated": findings_truncated}],
             "warnings": [] if tool == "shellcheck" else ["shellcheck not found; fallback checks syntax and a limited set of quoting/command-substitution pitfalls"],
-            "errors": [], "file_count": len(candidates), "dialect": dialect}
+            "errors": [str(result["launch_error"])] if result.get("launch_error") else [],
+            "file_count": len(candidates), "dialect": dialect}
 
 
 def sqlite_inspect(database: Path, row_counts: bool, integrity: bool) -> dict[str, Any]:
