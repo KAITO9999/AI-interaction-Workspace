@@ -106,6 +106,7 @@ def _run_file_batches(executable: str, prefix_args: list[str], paths: list[Path]
     any_failure = False
     timed_out = False
     launch_error = None
+    output_truncated = False
     stdout_truncated = False
     stderr_truncated = False
     batch_count = (len(paths) + batch_size - 1) // batch_size
@@ -123,16 +124,18 @@ def _run_file_batches(executable: str, prefix_args: list[str], paths: list[Path]
         stderr = _tail_text(stderr, f"{label}\n{result['stderr']}")
         stdout_truncated = stdout_truncated or bool(result.get("stdout_truncated"))
         stderr_truncated = stderr_truncated or bool(result.get("stderr_truncated"))
+        output_truncated = output_truncated or bool(result.get("stdout_truncated")) or bool(result.get("stderr_truncated"))
         if result.get("timed_out"):
             timed_out = True
             break
         if result.get("launch_error"):
             launch_error = str(result["launch_error"])
             break
-        if result.get("returncode") != 0:
+        if result.get("returncode") != 0 or result.get("capture_error"):
             any_failure = True
-    status = "TIMEOUT" if timed_out else "UNAVAILABLE" if launch_error else "FAIL" if any_failure else "PASS"
-    return {"status": status, "returncode": 124 if timed_out else 127 if launch_error else 1 if any_failure else 0,
+    status = ("TIMEOUT" if timed_out else "UNAVAILABLE" if launch_error else "FAIL" if any_failure
+              else "LIMIT" if output_truncated else "PASS")
+    return {"status": status, "returncode": 124 if timed_out else 127 if launch_error else 1 if any_failure or output_truncated else 0,
             "stdout": stdout, "stderr": stderr, "timed_out": timed_out,
             "launch_error": launch_error, "stdout_truncated": stdout_truncated,
             "stderr_truncated": stderr_truncated, "duration_seconds": round(time.monotonic() - started, 3),
