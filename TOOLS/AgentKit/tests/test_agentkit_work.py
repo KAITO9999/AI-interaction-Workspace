@@ -265,5 +265,27 @@ class AgentKitWorkTests(unittest.TestCase):
 
 
 
+    def test_explicit_symlink_parent_is_rejected_by_lint_and_context(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            real = root / "real"
+            real.mkdir()
+            (real / "safe.py").write_text("value = 1\n", encoding="utf-8")
+            alias = root / "alias"
+            try:
+                alias.symlink_to(real, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlinks unavailable")
+            lint = agentkit_work.lint_python(root, ["alias/safe.py"], 5)
+            self.assertEqual(lint["status"], "FAIL")
+            self.assertIn("symlink", lint["summary"].lower())
+            context = agentkit_work.context_inspect(
+                root, "alias/safe.py", None, None, None, False, 50, 10000, False
+            )
+            self.assertEqual(context["status"], "FAIL")
+            self.assertIn("symlink", context["summary"].lower())
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -76,6 +76,31 @@ def _discover_files(start: Path, boundary_root: Path, suffix: str,
     return sorted(candidates), False
 
 
+def _has_symlink_component(path: Path, boundary_root: Path) -> bool:
+    """Reject symlinks in any caller-supplied path component below the root."""
+    if not path.is_absolute():
+        path = boundary_root / path
+    root_parts = boundary_root.parts
+    if path.parts[:len(root_parts)] != root_parts:
+        # A path resolving into the root from a lexical path outside it is still
+        # a symlink-mediated access and should not be accepted as an explicit input.
+        return True
+    current = boundary_root
+    for part in path.parts[len(root_parts):]:
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            current = current.parent
+            continue
+        current = current / part
+        try:
+            if current.is_symlink():
+                return True
+        except OSError:
+            return True
+    return False
+
+
 def _source_budget_error(paths: list[Path]) -> str | None:
     total = 0
     for path in paths:
@@ -182,15 +207,15 @@ def lint_python(root: Path, files: list[str], timeout: int) -> dict[str, Any]:
             lexical = Path(raw).expanduser()
             if not lexical.is_absolute():
                 lexical = root / lexical
-            if lexical.is_symlink():
-                return {"summary": "Python lint rejected symlink", "status": "FAIL", "checks": [],
-                        "errors": [f"symlink input is not allowed: {raw}"]}
             path = lexical.resolve()
             try:
                 path.relative_to(root)
             except ValueError:
                 return {"summary": "Python lint rejected path", "status": "FAIL", "checks": [],
                         "errors": [f"path escapes root: {raw}"]}
+            if _has_symlink_component(lexical, root):
+                return {"summary": "Python lint rejected symlink", "status": "FAIL", "checks": [],
+                        "errors": [f"symlink path component is not allowed: {raw}"]}
             if not path.is_file() or path.suffix != ".py":
                 return {"summary": "Python lint rejected input", "status": "FAIL", "checks": [],
                         "errors": [f"not an existing .py file: {raw}"]}
@@ -289,15 +314,15 @@ def audit_shell(root: Path, files: list[str], dialect: str, timeout: int) -> dic
             lexical = Path(raw).expanduser()
             if not lexical.is_absolute():
                 lexical = root / lexical
-            if lexical.is_symlink():
-                return {"summary": "Shell audit rejected symlink", "status": "FAIL", "checks": [],
-                        "errors": [f"symlink input is not allowed: {raw}"]}
             path = lexical.resolve()
             try:
                 path.relative_to(root)
             except ValueError:
                 return {"summary": "Shell audit rejected path", "status": "FAIL", "checks": [],
                         "errors": [f"path escapes root: {raw}"]}
+            if _has_symlink_component(lexical, root):
+                return {"summary": "Shell audit rejected symlink", "status": "FAIL", "checks": [],
+                        "errors": [f"symlink path component is not allowed: {raw}"]}
             if not path.is_file():
                 return {"summary": "Shell audit rejected input", "status": "FAIL", "checks": [],
                         "errors": [f"not a file: {raw}"]}
@@ -525,14 +550,14 @@ def context_inspect(root: Path, target: str, start: int | None, end: int | None,
     lexical_target = Path(target).expanduser()
     if not lexical_target.is_absolute():
         lexical_target = root / lexical_target
-    if lexical_target.is_symlink():
-        return {"summary": "Context inspection rejected symlink", "status": "FAIL", "matches": [],
-                "errors": [f"symlink targets are not inspected: {target}"]}
     target_path = lexical_target.resolve()
     try:
         target_path.relative_to(root)
     except ValueError:
         return {"summary": "Context inspection rejected path", "status": "FAIL", "matches": [], "errors": [f"path escapes root: {target}"]}
+    if _has_symlink_component(lexical_target, root):
+        return {"summary": "Context inspection rejected symlink", "status": "FAIL", "matches": [],
+                "errors": [f"symlink path component is not allowed: {target}"]}
     if target_path.is_file():
         candidates, discovery_limited = [target_path], False
     elif target_path.is_dir():
