@@ -13,13 +13,13 @@ import os
 import re
 import shutil
 import sqlite3
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Any, Iterable
 
 from agentkit_lint import lint_python_source, lint_shell_source
+from agentkit_process import process_status, run_process
 
 VERSION = "0.1.0"
 SKIP_DIRS = {".git", ".hg", ".svn", "node_modules", ".venv", "venv", "__pycache__", "target", "dist", "build", ".next", ".cache"}
@@ -41,28 +41,8 @@ def emit(data: dict[str, Any], json_mode: bool = False) -> None:
 
 
 def run_argv(argv: list[str], timeout: int = 30, cwd: Path | None = None) -> dict[str, Any]:
-    """Run an explicit argument vector; never invoke a shell."""
-    started = time.monotonic()
-    try:
-        result = subprocess.run(argv, cwd=str(cwd) if cwd else None, capture_output=True,
-                                text=True, errors="replace", timeout=timeout, check=False)
-        return {"argv": argv, "returncode": result.returncode, "stdout": result.stdout,
-                "stderr": result.stderr, "duration_seconds": round(time.monotonic() - started, 3),
-                "timed_out": False}
-    except subprocess.TimeoutExpired as exc:
-        return {"argv": argv, "returncode": 124, "stdout": _decode(exc.stdout),
-                "stderr": _decode(exc.stderr) + f"\nTIMEOUT after {timeout}s",
-                "duration_seconds": round(time.monotonic() - started, 3), "timed_out": True}
-    except OSError as exc:
-        return {"argv": argv, "returncode": 127, "stdout": "",
-                "stderr": f"{type(exc).__name__}: {exc}",
-                "duration_seconds": round(time.monotonic() - started, 3), "timed_out": False}
-
-
-def _decode(value: str | bytes | None) -> str:
-    if value is None:
-        return ""
-    return value.decode("utf-8", "replace") if isinstance(value, bytes) else value
+    """Run an argv command through the shared bounded process supervisor."""
+    return run_process(argv, timeout=timeout, cwd=cwd, output_limit=12_000)
 
 
 def repo_check(root: Path, timeout: int) -> dict[str, Any]:
@@ -84,9 +64,12 @@ def repo_check(root: Path, timeout: int) -> dict[str, Any]:
         ("diff-staged-stat", ["diff", "--cached", "--stat"]),
     ):
         result = run_argv([git, "-C", str(root), *args], timeout)
-        checks.append({"name": name, "status": "PASS" if result["returncode"] == 0 else "FAIL",
-                       "returncode": result["returncode"], "stdout": result["stdout"][:20000],
-                       "stderr": result["stderr"][:4000], "timed_out": result["timed_out"]})
+        checks.append({"name": name, "status": process_status(result),
+                       "returncode": result["returncode"], "stdout": result["stdout"][:12000],
+                       "stderr": result["stderr"][:4000], "timed_out": result["timed_out"],
+                       "launch_error": result.get("launch_error"),
+                       "stdout_truncated": result.get("stdout_truncated", False),
+                       "stderr_truncated": result.get("stderr_truncated", False)})
     return {"summary": "Git repository inspection complete; no files changed",
             "root": str(root), "checks": checks, "errors": [], "read_only": True}
 
