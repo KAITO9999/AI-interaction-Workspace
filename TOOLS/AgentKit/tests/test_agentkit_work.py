@@ -287,5 +287,39 @@ class AgentKitWorkTests(unittest.TestCase):
 
 
 
+    def test_overall_status_priority_is_consistent(self):
+        cases = [
+            ({"status": "TIMEOUT", "checks": [{"status": "FAIL"}]}, "TIMEOUT"),
+            ({"status": "FAIL", "checks": [{"status": "UNAVAILABLE"}]}, "FAIL"),
+            ({"checks": [{"status": "LIMIT"}, {"status": "PASS"}]}, "LIMIT"),
+            ({"checks": [{"status": "UNAVAILABLE"}]}, "UNAVAILABLE"),
+            ({"summary": "Context inspection complete", "status": "PASS", "matches": []}, "PASS"),
+            ({"summary": "No eligible Python files found", "checks": [], "errors": ["no files"]}, "UNAVAILABLE"),
+        ]
+        for report, expected in cases:
+            with self.subTest(report=report):
+                self.assertEqual(agentkit_work.overall_status(report), expected)
+
+    def test_shell_audit_capture_error_is_not_success(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.sh").write_text("echo safe\n", encoding="utf-8")
+            completed = {
+                "status": "FAIL", "returncode": 0, "stdout": "", "stderr": "",
+                "timed_out": False, "launch_error": None, "capture_error": "simulated pipe failure",
+                "stdout_truncated": False, "stderr_truncated": False,
+            }
+            def which(name):
+                return None if name == "shellcheck" else "/bin/sh"
+            with patch("agentkit_work.shutil.which", side_effect=which), patch(
+                "agentkit_work.run_argv", return_value=completed
+            ):
+                report = agentkit_work.audit_shell(root, [], "sh", 3)
+            self.assertEqual(report["status"], "FAIL")
+            self.assertIn("simulated pipe failure", json.dumps(report))
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

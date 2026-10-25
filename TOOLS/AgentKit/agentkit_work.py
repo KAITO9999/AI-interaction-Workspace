@@ -32,6 +32,31 @@ MAX_REPORTED_FINDINGS = 500
 PROCESS_OUTPUT_LIMIT = 12_000
 
 
+def overall_status(report: dict[str, Any]) -> str:
+    """Resolve a report's machine status consistently; incomplete checks never pass."""
+    statuses = [str(report["status"])] if report.get("status") else []
+    statuses.extend(str(check["status"]) for check in report.get("checks", []) if check.get("status"))
+    statuses.extend(
+        str(item["status"])
+        for item in report.get("artifacts", [])
+        if item.get("status")
+    )
+    if "TIMEOUT" in statuses:
+        return "TIMEOUT"
+    if "FAIL" in statuses:
+        return "FAIL"
+    if "LIMIT" in statuses:
+        return "LIMIT"
+    if "UNAVAILABLE" in statuses:
+        return "UNAVAILABLE"
+    if report.get("errors"):
+        summary = str(report.get("summary", "")).lower()
+        return "UNAVAILABLE" if "unavailable" in summary or summary.startswith("no ") else "FAIL"
+    if str(report.get("summary", "")).startswith("No "):
+        return "UNAVAILABLE"
+    return "PASS"
+
+
 def emit(data: dict[str, Any], json_mode: bool = False) -> None:
     if json_mode:
         print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -367,11 +392,12 @@ def audit_shell(root: Path, files: list[str], dialect: str, timeout: int) -> dic
                                  "error": f"total timeout of {timeout}s exhausted"})
                 break
             result_one = run_argv([shell, "-n", str(path)], max(0.05, remaining), root)
-            if result_one["returncode"] != 0:
+            if result_one["returncode"] != 0 or result_one.get("capture_error"):
                 failures.append({"file": str(path.relative_to(root)), "returncode": result_one["returncode"],
                                  "stderr": result_one["stderr"][-2000:],
                                  "timed_out": result_one["timed_out"],
-                                 "launch_error": result_one.get("launch_error")})
+                                 "launch_error": result_one.get("launch_error"),
+                                 "capture_error": result_one.get("capture_error")})
             timed_out = timed_out or bool(result_one["timed_out"])
             launch_error = launch_error or result_one.get("launch_error")
             if timed_out or launch_error:
@@ -699,22 +725,7 @@ def main(argv: list[str] | None = None) -> int:
         report = args.handler(args)
     except KeyboardInterrupt:
         report = {"summary": "Interrupted; no automatic retry", "checks": [], "errors": ["interrupted"]}
-    status = report.get("status")
-    if status is None:
-        check_statuses = [check.get("status") for check in report.get("checks", [])]
-        if "TIMEOUT" in check_statuses:
-            status = "TIMEOUT"
-        elif "UNAVAILABLE" in check_statuses:
-            status = "UNAVAILABLE"
-        elif "LIMIT" in check_statuses or any(item.get("status") == "LIMIT" for item in report.get("artifacts", [])):
-            status = "LIMIT"
-        elif report.get("errors") or "FAIL" in check_statuses:
-            summary = str(report.get("summary", "")).lower()
-            status = "UNAVAILABLE" if "unavailable" in summary or summary.startswith("no ") else "FAIL"
-        elif str(report.get("summary", "")).startswith("No "):
-            status = "UNAVAILABLE"
-        else:
-            status = "PASS"
+    status = overall_status(report)
     report["status"] = status
     emit(report, args.json)
     return 0 if status == "PASS" else 1
