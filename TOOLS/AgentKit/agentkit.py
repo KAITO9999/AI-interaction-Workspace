@@ -2,6 +2,7 @@
 """AgentKit: environment-first AI probe helpers; Python stdlib only."""
 import argparse, datetime as dt, json, os, re, shutil, subprocess, sys, time
 from pathlib import Path
+from agentkit_process import run_process
 VERSION="0.1.0"
 SKIP={".git",".hg",".svn","node_modules",".venv","venv","__pycache__","target","dist","build"}
 TOOLS="git has isetup curl wget tar unzip zip find grep rg fd tree strace ltrace perf valgrind gdb lldb readelf objdump ldd lddtree nm file jq yq shellcheck hyperfine python3 python node npm pnpm bun deno rustc cargo gcc g++ clang clang++ go javac wasmtime wasm-tools timeout date sha256sum".split()
@@ -55,23 +56,46 @@ def probe(a):
     print("判断: 既存コマンドを優先。存在確認だけでは対象コードの動作保証になりません。")
     return 0
 def fetch_probe(a):
-    if not shutil.which("git"): print("ERROR: gitなし。終了。",file=sys.stderr); return 2
+    if not shutil.which("git"):
+        print("ERROR: gitなし。終了。", file=sys.stderr)
+        return 2
     print(f"読み取り専用リポジトリ到達性テスト（1回のみ）: {a.url}; timeout={a.timeout}s")
-    try: p=subprocess.Popen(["git","ls-remote","--heads",a.url],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
-    except Exception as e: print(f"ERROR: 起動失敗: {e}",file=sys.stderr); return 2
-    start=time.monotonic()
-    while p.poll() is None:
-        elapsed=int(time.monotonic()-start)
-        if elapsed>=a.timeout:
-            p.kill(); p.communicate(); print(f"タイムアウトの可能性: 経過秒数 {a.timeout}/{a.timeout}。再試行せず停止。"); return 124
-        print(f"更新中（経過秒数: {elapsed+1}/{a.timeout}）…",flush=True)
-        time.sleep(min(1,max(.05,a.timeout-(time.monotonic()-start))))
-    out,err=p.communicate()
-    if p.returncode:
-        print(f"ERROR: 初回テスト失敗 (exit={p.returncode})")
-        if err.strip(): print("詳細:",err.strip()[:500])
-        print("仕様により取得を再試行しません。"); return p.returncode or 1
-    print(f"取得経路OK: refs={sum(bool(x.strip()) for x in out.splitlines())}; clone/downloadは未実施"); return 0
+    try:
+        result = run_process(
+            ["git", "ls-remote", "--heads", a.url],
+            timeout=a.timeout,
+            output_limit=4000,
+            progress_interval=1.0,
+            on_progress=lambda elapsed, remaining: print(
+                f"更新中（経過秒数: {min(a.timeout, int(elapsed) + 1)}/{a.timeout}）…",
+                flush=True,
+            ),
+        )
+    except (OSError, ValueError) as exc:
+        print(f"ERROR: 起動失敗: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 2
+    if result["status"] == "TIMEOUT":
+        print(f"タイムアウト: 経過秒数 {a.timeout}/{a.timeout}。子プロセスを終了し、再試行せず停止。")
+        return 124
+    if result["status"] == "UNAVAILABLE":
+        print(f"ERROR: 起動失敗: {result.get('launch_error')}", file=sys.stderr)
+        return 2
+    if result["returncode"]:
+        print(f"ERROR: 初回テスト失敗 (exit={result['returncode']})")
+        if str(result["stderr"]).strip():
+            print("詳細:", str(result["stderr"]).strip()[-500:])
+        if result.get("stderr_truncated"):
+            print("詳細は末尾のみ保持されています。", file=sys.stderr)
+        print("仕様により取得を再試行しません。")
+        return int(result["returncode"]) or 1
+    ref_count = int(result["stdout_line_count"])
+    print(f"取得経路OK: refs={ref_count}; clone/downloadは未実施")
+    if result["stdout_truncated"]:
+        print("INFO: stdout 全量は ref 数に反映済み。診断用バッファのみ上限で切り詰めました。")
+    if result.get("capture_error"):
+        print(f"ERROR: 出力処理に失敗: {result['capture_error']}", file=sys.stderr)
+        return 1
+    return 0
 def locate(a):
     p=Path(a.file).expanduser()
     if not p.is_file(): print("ERROR: ファイルなし:",p,file=sys.stderr); return 2
@@ -121,8 +145,8 @@ def timer(a):
 def versions(a):
     commands,formats=caps(); lines=["# AgentKit Capability Table","",f"AgentKit: {VERSION}",f"Generated local: {now().isoformat(timespec='seconds')}",f"Generated UTC: {dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')}",f"Root: {Path(a.root).expanduser().resolve()}","","## Commands","","| Command | Path | Version (best effort) |","|---|---|---|"]
     for c in commands:
-        try: v=subprocess.run([c["name"],"--version"],capture_output=True,text=True,timeout=2).stdout.strip().splitlines()
-        except Exception: v=[]
+        result = run_process([c["name"], "--version"], timeout=2, output_limit=1000)
+        v = str(result["stdout"]).strip().splitlines() if result["status"] == "PASS" and not result.get("stdout_truncated") else []
         lines.append(f"| {c['name']} | {c['path']} | {(v or ['unknown'])[0][:120]} |")
     lines += ["","## Format capability hints","","| Format | Available | Tools |","|---|---|---|"]
     for ext,v in formats.items(): lines.append(f"| {ext} | {'yes' if v['available'] else 'no'} | {', '.join(v['tools']) or 'none'} |")

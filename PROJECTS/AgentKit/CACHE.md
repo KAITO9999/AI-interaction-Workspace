@@ -1,7 +1,7 @@
 # AgentKit — cache
 
 Status: smartphone profile preflight implementation and CI validation passed; Android runtime validation pending.
-Last reviewed: 2026-10-21
+Last reviewed: 2026-10-25
 
 ## Verified source facts
 
@@ -19,3 +19,10 @@ Last reviewed: 2026-10-21
 ## Completed items moved from PLAN
 
 | 2026-10-21 | Add smartphone profile preflight and automated compatibility gate | PASS; 39 AgentKit unit tests passed in GitHub Actions on Ubuntu; Python compilation and shell syntax checks passed; provenance validation passed; 115 repository-local Markdown links checked. Pull request: [#13](https://github.com/KAITO9999/AI-interaction-Workspace/pull/13). Physical-device/emulator tests remain pending.
+
+## Completed items
+
+| 2026-10-25 | Add Python-first workflow checks, context-bounded inspection and concurrent verification watcher | PASS; GitHub Actions run [40137923343](https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/40137923343) passed Python compilation, POSIX shell syntax, all 57 unit tests, change-ledger provenance and Markdown-link validation. The tools were exercised on GitHub-hosted Ubuntu; Termux and other target virtual-Linux environments remain unverified. |
+
+
+| 2026-10-25 | Centralize subprocess supervision and audit AgentKit tool consistency | PASS; GitHub Actions run [40156135136](https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/40156135136) passed 98 unit tests, Python compilation, POSIX shell syntax, change-ledger provenance and local Markdown-link checks. Runtime process launches now share the bounded supervisor; target-environment/Termux tests remain unverified. Draft PR: [#17](https://github.com/KAITO9999/AI-interaction-Workspace/pull/17). |

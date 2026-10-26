@@ -109,5 +109,38 @@ class ResolverTests(unittest.TestCase):
             self.assertIn("fake-find-ran", result.stdout)
 
 
+    def test_external_search_command_output_is_streamed_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bins = root / "bin"
+            bins.mkdir()
+            fake = bins / "rg"
+            fake.write_text(f"#!{sys.executable}\nprint('first result')\nprint('last result')\n", encoding="utf-8")
+            fake.chmod(0o755)
+            target = root / "source"
+            target.mkdir()
+            env = self.empty_path_env(bins)
+            result = run("search", str(target), "--pattern", "needle", env=env)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertEqual(result.stdout.count("first result"), 1)
+            self.assertEqual(result.stdout.count("last result"), 1)
+
+    def test_external_search_timeout_has_clean_exit_and_no_retry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bins = root / "bin"
+            bins.mkdir()
+            fake = bins / "rg"
+            fake.write_text(f"#!{sys.executable}\nimport time\ntime.sleep(10)\n", encoding="utf-8")
+            fake.chmod(0o755)
+            target = root / "source"
+            target.mkdir()
+            env = self.empty_path_env(bins)
+            result = run("search", str(target), "--pattern", "needle", "--timeout", "1", env=env)
+            self.assertEqual(result.returncode, 124)
+            self.assertIn("process group terminated", result.stderr)
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -7,9 +7,9 @@ import datetime as dt
 import json
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
+from agentkit_process import run_process
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -171,28 +171,32 @@ def compile_typescript(args: argparse.Namespace) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     print("Compiler:", compiler)
-    try:
-        result = subprocess.run(command, cwd=root, check=False, timeout=args.timeout)
-    except subprocess.TimeoutExpired:
-        print(f"ERROR: compiler timed out after {args.timeout}s; no automatic retry.", file=sys.stderr)
+    result = run_process(command, cwd=root, timeout=args.timeout, output_limit=12_000, stream_output=True)
+    if result["timed_out"]:
+        print(f"ERROR: compiler timed out after {args.timeout}s; process group terminated; no automatic retry.", file=sys.stderr)
         return 124
-    except OSError as exc:
-        print(f"ERROR: could not start compiler: {exc}", file=sys.stderr)
+    if result.get("launch_error"):
+        print(f"ERROR: could not start compiler: {result['launch_error']}", file=sys.stderr)
         return 126
-    if result.returncode == 0:
+    if result.get("capture_error"):
+        print(f"ERROR: compiler output handling failed: {result['capture_error']}", file=sys.stderr)
+        return 1
+    returncode = int(result["returncode"])
+    if returncode == 0:
         print("TypeScript compiler exited successfully.")
     else:
-        print(f"TypeScript compiler exited with status {result.returncode}.", file=sys.stderr)
-    return result.returncode
+        print(f"TypeScript compiler exited with status {returncode}.", file=sys.stderr)
+    return returncode
 
 
 def git_value(root: Path, *arguments: str) -> str | None:
-    try:
-        result = subprocess.run(["git", *arguments], cwd=root, capture_output=True, text=True, timeout=2, check=False)
-    except (OSError, subprocess.TimeoutExpired):
+    result = run_process(
+        ["git", *arguments], cwd=root, timeout=2, output_limit=1000
+    )
+    if result["status"] != "PASS" or result.get("stdout_truncated"):
         return None
-    value = result.stdout.strip()
-    return value if result.returncode == 0 and value else None
+    value = str(result["stdout"]).strip()
+    return value or None
 
 
 def record_change(args: argparse.Namespace) -> int:
@@ -324,13 +328,22 @@ def validate_addon(args: argparse.Namespace) -> int:
                     for index, info in enumerate(js_files):
                         temp_file = Path(temp_dir) / f"script_{index}.mjs"
                         temp_file.write_bytes(archive.read(info))
-                        try:
-                            check = subprocess.run([node, "--check", str(temp_file)], capture_output=True, text=True, timeout=args.js_timeout, check=False)
-                        except subprocess.TimeoutExpired:
-                            js_errors.append(f"{info.filename}: node --check timed out")
+                        check = run_process(
+                            [node, "--check", str(temp_file)],
+                            timeout=args.js_timeout,
+                            output_limit=3000,
+                        )
+                        if check["timed_out"]:
+                            js_errors.append(f"{info.filename}: node --check timed out; process group terminated")
                             continue
-                        if check.returncode:
-                            js_errors.append(f"{info.filename}: {(check.stderr or check.stdout).strip()[:300]}")
+                        if check.get("launch_error"):
+                            js_errors.append(f"{info.filename}: node --check could not start: {check['launch_error']}")
+                            continue
+                        if check["returncode"] or check.get("capture_error"):
+                            detail = (str(check["stderr"]) or str(check["stdout"])).strip()[:300]
+                            if check.get("stderr_truncated") or check.get("stdout_truncated"):
+                                detail += " [diagnostic tail truncated]"
+                            js_errors.append(f"{info.filename}: {detail or 'node --check failed'}")
                 if js_errors:
                     failed("js_syntax", f"{len(js_errors)} JavaScript file(s) failed syntax check; examples: {js_errors[:10]}")
                 else:

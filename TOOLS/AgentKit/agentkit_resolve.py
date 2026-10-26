@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
+from agentkit_process import run_process
 from pathlib import Path
 
 VERSION = "0.1.0"
@@ -40,8 +41,43 @@ INSTALLERS = {
 
 
 def run(argv: list[str], timeout: int = 30) -> subprocess.CompletedProcess[str]:
-    """Run an explicit argv list without shell expansion and with a timeout."""
-    return subprocess.run(argv, capture_output=True, text=True, timeout=timeout, check=False)
+    """Run an argv command with group timeout, live passthrough, and bounded diagnostic tails."""
+    result = run_process(
+        argv, timeout=timeout, output_limit=12_000, stream_output=True
+    )
+    if result["timed_out"]:
+        raise subprocess.TimeoutExpired(
+            argv, timeout, output=str(result["stdout"]), stderr=str(result["stderr"])
+        )
+    if result.get("launch_error"):
+        raise OSError(str(result["launch_error"]))
+    returncode = int(result["returncode"])
+    if result.get("capture_error") and returncode == 0:
+        returncode = 1
+    completed = subprocess.CompletedProcess(
+        list(argv), returncode, str(result["stdout"]), str(result["stderr"])
+    )
+    completed.streamed_output = True
+    completed.stdout_truncated = bool(result.get("stdout_truncated"))
+    completed.stderr_truncated = bool(result.get("stderr_truncated"))
+    completed.capture_error = result.get("capture_error")
+    return completed
+
+
+def report_stream_metadata(result: subprocess.CompletedProcess[str]) -> None:
+    """Report capture limitations without printing streamed command output twice."""
+    if getattr(result, "capture_error", None):
+        print(f"ERROR: output forwarding/capture failed: {result.capture_error}", file=sys.stderr)
+    if getattr(result, "stdout_truncated", False) or getattr(result, "stderr_truncated", False):
+        print(
+            "WARNING: command output was streamed live; the retained diagnostic tail is truncated.",
+            file=sys.stderr,
+        )
+    if getattr(result, "streamed_output", False):
+        if result.stdout and not result.stdout.endswith("\n"):
+            print()
+        if result.stderr and not result.stderr.endswith("\n"):
+            print(file=sys.stderr)
 
 
 def available_installers() -> list[str]:
@@ -162,12 +198,12 @@ def try_install(command: str, timeout: int) -> int:
         try:
             result = run(argv, timeout=timeout)
         except subprocess.TimeoutExpired:
-            print(f"INSTALL TIMEOUT after {timeout}s; no automatic retry.", file=sys.stderr)
+            print(f"INSTALL TIMEOUT after {timeout}s; process group terminated; no automatic retry.", file=sys.stderr)
             return 124
-        if result.stdout.strip():
-            print(result.stdout.strip()[-2000:])
-        if result.stderr.strip():
-            print(result.stderr.strip()[-2000:], file=sys.stderr)
+        except OSError as exc:
+            print(f"INSTALL LAUNCH FAILED: {exc}", file=sys.stderr)
+            return 126
+        report_stream_metadata(result)
         if result.returncode == 0 and shutil.which(command):
             print(f"INSTALL VERIFIED: {command} is now on PATH.")
             return 0
@@ -223,12 +259,12 @@ def main() -> int:
         try:
             result = run(command_args, timeout=args.timeout)
         except subprocess.TimeoutExpired:
-            print(f"ERROR: command timed out after {args.timeout}s; no automatic retry.", file=sys.stderr)
+            print(f"ERROR: command timed out after {args.timeout}s; process group terminated; no automatic retry.", file=sys.stderr)
             return 124
-        if result.stdout:
-            print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
-        if result.stderr:
-            print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr)
+        except OSError as exc:
+            print(f"ERROR: command could not start: {exc}", file=sys.stderr)
+            return 126
+        report_stream_metadata(result)
         return result.returncode
     print("Using Python standard-library fallback.")
     return fallback(args.task, args)

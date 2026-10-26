@@ -125,5 +125,21 @@ class AgentKitExtensionTests(unittest.TestCase):
             self.assertIn("archive_paths", result.stderr)
 
 
+    def test_compile_typescript_timeout_terminates_process_group(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "project"
+            bins = Path(directory) / "bin"
+            root.mkdir(); bins.mkdir()
+            (root / "main.ts").write_text("const value: number = 1;\n", encoding="utf-8")
+            fake = bins / "tsc"
+            fake.write_text(f"#!{sys.executable}\nimport time\ntime.sleep(10)\n", encoding="utf-8")
+            fake.chmod(0o755)
+            env = os.environ.copy(); env["PATH"] = str(bins)
+            result = run("compile-ts", "--root", str(root), "--timeout", "1", env=env, timeout=5)
+            self.assertEqual(result.returncode, 124)
+            self.assertIn("process group terminated", result.stderr)
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

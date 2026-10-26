@@ -59,3 +59,38 @@ These are reference candidates, not vendored dependencies. Check the current rep
 - Installation is disabled unless `--install` is explicitly supplied; only fixed package mappings and supported package managers are allowed.
 - Never add automatic retries, shell interpolation, privilege escalation, or unreviewed arbitrary package names.
 - After an install attempt, verify the executable and rerun a bounded task-specific test. Report install success separately from task success.
+
+
+## Workflow checks and context budget
+
+- Use `python3 TOOLS/AgentKit/agentkit_work.py context --root <root> --target <path> --start <n> --end <n> --json` to retrieve only a line range, or `--pattern <text>` to return matching lines. Keep `--max-lines` and `--max-bytes` bounded; do not dump whole repositories/files when a focused range suffices.
+- Use `repo-check` for read-only Git status and staged/unstaged diff checks. If Git is missing or the target is not a worktree, treat that check as unavailable; never approximate Git semantics.
+- Use `lint-python` and `audit-shell` before claiming static validation. Record whether Ruff/ShellCheck ran or whether the dependency-free `agentkit_lint.py` fallback ran. The fallback checks a small set of AST/line-based rules and is not equivalent to either upstream linter; never describe it as full lint coverage. Review its findings for false positives and false negatives.
+- Use `sqlite-inspect` only with an explicit database path; it opens the DB read-only and does not accept arbitrary SQL.
+- Use `artifact-inspect` for bounded magic-byte and SHA-256 reports. A magic-byte guess is not proof of safety or runtime compatibility.
+- Treat JSON reports as evidence with explicit limits, not proof beyond the checks named. Keep separate checks running when one unrelated check fails; do not convert unavailable checks into PASS.
+
+- For concurrent editing and verification, run `python3 TOOLS/AgentKit/agentkit_watch.py --root <root> --watch <source-dir> --watch <test-dir> -- python3 -m unittest discover -s <test-dir> -v` in a separate terminal. The watcher uses content hashes, a debounce interval and bounded runs/timeouts; it does not execute a shell command string. Choose explicit watch roots and an explicit test command.
+
+
+## Native static-analysis fallback and logic tests
+
+- When Ruff is absent, `agentkit_work.py lint-python` uses `agentkit_lint.py` for syntax, unused-import, bare-except and mutable-literal-default checks. When ShellCheck is absent, `audit-shell` combines the selected shell's `-n` syntax check with limited heuristics for common quoting/expansion pitfalls.
+- Prefer upstream tools when available. The native fallback is a bounded subset, not a compatibility clone; its report must preserve that distinction.
+- For changes to fallback logic, add tests for both detection and non-detection cases (e.g. quoted variables, assignment contexts, `__init__.py` re-exports), then run `python3 -m unittest discover -s TOOLS/AgentKit/tests -v`.
+- For resource/path logic, test root escape rejection, symlink boundaries, output/byte budgets, timeout behavior, and read-only guarantees. Hosted CI is not a substitute for Termux or target virtual-Linux smoke tests.
+
+
+## Shared process supervision and status semantics
+
+AgentKit's workflow tools use one subprocess supervisor instead of maintaining separate timeout and output-capture implementations. It passes argument vectors without shell interpolation, drains each output stream while the child runs, retains only bounded output tails, closes pipes, and separates normal failure from timeout and launch unavailability. POSIX timeouts terminate the command's process group; intentionally detached descendants are not guaranteed to be terminated.
+
+- PASS: the check completed without detected issues.
+- FAIL: a check or command reported a problem.
+- TIMEOUT: the configured total deadline elapsed.
+- UNAVAILABLE: the required executable or a valid automatic target set was not available.
+- LIMIT: the scan/input/diagnostic budget prevented a complete report.
+
+Symlinks and dependency/build directories are pruned during automatic discovery. Static analysis is limited to 10,000 files, 5 MB per file and 50 MB aggregate source bytes; fallback findings are capped at 500. Ruff and ShellCheck are executed in batches of at most 100 paths under one total deadline. The watcher snapshot has its own 10,000-file / 100 MB budget. Treat LIMIT as incomplete, never as a clean result.
+
+Hosted evidence: [workflow run 40156135136](https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/40156135136) passed 98 unit tests, Python compilation, POSIX shell syntax, change-ledger provenance, and local Markdown-link checks at commit 6a47f390e4c5ff947b930583194e698c3abaef3b. Runtime subprocess launches across AgentKit's CLI modules now route through the shared runner; test harnesses are the deliberate exception. Termux/device tests are separate and remain unverified.

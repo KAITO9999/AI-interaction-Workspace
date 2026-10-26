@@ -100,3 +100,80 @@ python3 TOOLS/AgentKit/mobile_test.py --root path/to/android-project --android-v
 When `--profile` is omitted, all profiles are assigned automatically: low-end 4 GB / Android 11 (API 30), mid-end 8 GB / Android 15 (API 35), mid-high 12 GB / no default Android target, and high-end 16 GB / no default Android target. A known minSdk higher than the selected target API rejects that profile; an unknown minSdk blocks version-gated checks for review. See [MOBILE_TESTING.md](MOBILE_TESTING.md) for details.
 
 This is a static compatibility preflight and test-plan generator only. It does not launch an emulator, install an APK, or measure real-device performance.
+
+
+## Python-first workflow tools (`agentkit_work.py`)
+
+These tools are additive; they do not replace the core probe, command resolver, TypeScript compiler, provenance recorder, add-on audit, or mobile preflight.
+
+```sh
+python3 TOOLS/AgentKit/agentkit_work.py --help
+python3 TOOLS/AgentKit/agentkit_work.py repo-check --root . --json
+python3 TOOLS/AgentKit/agentkit_work.py lint-python --root . --json
+python3 TOOLS/AgentKit/agentkit_work.py audit-shell --root . --dialect sh --json
+python3 TOOLS/AgentKit/agentkit_work.py sqlite-inspect path/to/data.db --row-counts --integrity-check --json
+python3 TOOLS/AgentKit/agentkit_work.py artifact-inspect path/to/file --json
+python3 TOOLS/AgentKit/agentkit_work.py context --root . --target TOOLS/AgentKit/agentkit_work.py --start 1 --end 80 --json
+python3 TOOLS/AgentKit/agentkit_work.py context --root . --target TOOLS/AgentKit --pattern "def context_inspect" --max-lines 20 --json
+```
+
+- `repo-check` invokes Git itself for status, staged/unstaged whitespace checks and summaries. If Git or a Git worktree is absent, it fails explicitly; it does not simulate Git.
+- `lint-python` uses `ruff check` when available; otherwise it runs `agentkit_lint.py`'s Python-AST fallback: syntax validation, unused-import checks (F401-like), bare-except checks (E722-like), and mutable literal default checks. This limited rule set is **not Ruff-equivalent** and can miss issues or report scope-related false positives.
+- `audit-shell` uses ShellCheck when available; otherwise it combines the explicitly selected `sh -n` or `bash -n` syntax checker with `agentkit_lint.py` heuristics for unquoted expansions (SC2086-like), unquoted command substitutions (SC2046-like), exported command substitutions (SC2155-like), legacy backticks (SC2006-like), and delayed exit-status checks (SC2181-like). This small line-based rule set is **not ShellCheck-equivalent**; review findings manually.
+- `sqlite-inspect` uses Python's standard-library SQLite binding in read-only mode; arbitrary SQL is not accepted. Row counts and integrity checks are opt-in.
+- `artifact-inspect` computes SHA-256 and checks a small magic-byte allowlist within a byte budget; when the official `file` utility is available, it also records that utility's description. The Python magic list is only a fallback hint, not a full replacement for `file`. It never executes files; unknown file types remain unknown.
+- `context` reads bounded line ranges or matching lines and emits machine-readable JSON when requested. It excludes dependency/build directories, rejects root escapes and skips symlinks during recursive scans. Default limits are 250 output lines and 1 MB of scanned file content.
+
+All external commands use argument arrays (no shell expansion), bounded timeouts, and bounded report excerpts. A fallback only provides the explicitly named subset; it is not a general reimplementation of the upstream command. Run the test suite with `python3 -m unittest discover -s TOOLS/AgentKit/tests -v`.
+
+## Keep verification running during edits
+
+`agentkit_watch.py` reruns an explicit verification command when watched files change. Run it in a separate terminal while editing:
+
+```sh
+python3 TOOLS/AgentKit/agentkit_watch.py --root . --watch TOOLS/AgentKit --max-runs 25 -- python3 -m unittest discover -s TOOLS/AgentKit/tests -v
+```
+
+The watcher performs one initial run unless `--no-initial-run` is supplied, then polls file content hashes and reruns after a quiet/debounce period. It uses an argument vector without shell evaluation, bounds polling interval, command timeout, number of runs, watched file count, total scanned bytes, and captured output. Default limit is 25 runs. Stop it with Ctrl-C. Its exit status reflects the verification runs and scan warnings; a clean watcher exit does not prove runtime behavior beyond the supplied command.
+
+## Upstream behavior references
+
+The wrappers intentionally invoke the upstream command rather than reimplementing its full behavior. Recheck these references when changing arguments or fallback claims:
+
+- [Git `status`](https://git-scm.com/docs/git-status) and [Git `diff`](https://git-scm.com/docs/git-diff): repository state, staged/unstaged differences, whitespace checks and stable porcelain output.
+- [Ruff `check`](https://docs.astral.sh/ruff/configuration/): actual linting behavior and supported output formats. The Python `compile()` fallback only checks syntax.
+- [ShellCheck](https://github.com/koalaman/shellcheck): shell static analysis. `sh -n`/`bash -n` only check syntax.
+- [Python `sqlite3`](https://docs.python.org/3/library/sqlite3.html) and [SQLite URI filenames](https://www.sqlite.org/uri.html): read-only `mode=ro` behavior.
+- [`file(1)` manual](https://man7.org/linux/man-pages/man1/file.1.html): upstream file-type description. The Python magic-byte allowlist is deliberately incomplete.
+
+
+### Dependency-free static-analysis fallback
+
+Run the limited native checks directly when investigating the fallback itself:
+
+```sh
+python3 TOOLS/AgentKit/agentkit_lint.py python TOOLS/AgentKit/agentkit_work.py
+python3 TOOLS/AgentKit/agentkit_lint.py shell --dialect sh TOOLS/AgentKit/agentkit
+```
+
+The fallback intentionally has no third-party dependencies and does not download/install anything. Its Python rules use `ast`; its shell rules are conservative line heuristics and do not parse full shell grammar. Upstream Ruff/ShellCheck remain preferred whenever present. Native fallback findings cause `lint-python` / `audit-shell` to fail so they cannot silently pass CI; distinguish warnings from syntax errors in the JSON report. Tests cover both rule behavior and false-positive boundaries.
+
+
+### Shared process supervision and result consistency
+
+The workflow tools now share a standard-library process supervisor. It invokes argv arrays without a shell, disables stdin, drains stdout and stderr concurrently, retains a bounded tail of each stream, closes both pipe objects, and reports timeout, launch failure, output-capture failure, and truncation explicitly. On POSIX, a timed-out command is started in its own session and its process group receives TERM followed by KILL. A deliberately detached descendant that creates a new session is outside that guarantee.
+
+Machine-readable status values have consistent meanings: PASS means the check completed with no detected issue; FAIL means an issue or command failure was observed; TIMEOUT means the overall deadline was reached; UNAVAILABLE means the required executable or a valid target set was unavailable; LIMIT means a scan, input, finding, or diagnostic-output budget prevented a complete report. A partial report must not be interpreted as a clean pass. Context search on an existing but empty/excluded-only directory is a valid zero-hit search; automatic lint scans with no eligible source files are unavailable instead.
+
+Discovery prunes common dependency/build directories, skips symlinks, and fails closed above 10,000 files. Static-analysis input is capped at 5 MB per file and 50 MB total; the fallback reports at most 500 findings. Ruff and ShellCheck calls are split into batches of up to 100 paths under one overall deadline. Watch snapshots have their own 10,000-file and 100 MB limits. These bounds are intentional; narrow a target instead of assuming a partial scan was complete.
+
+The process runner follows Python's subprocess API and cleanup cautions: [Python 3.12 subprocess documentation](https://docs.python.org/3.12/library/subprocess.html). Ruff's supported check options are documented in [Ruff configuration and CLI documentation](https://docs.astral.sh/ruff/configuration/). ShellCheck remains the preferred shell analyzer; see the [ShellCheck upstream project](https://github.com/koalaman/shellcheck#readme). None of these native fallbacks claim feature parity with the upstream analyzers.
+
+
+### Runtime command integration
+
+All AgentKit runtime subprocess launches are routed through agentkit_process.py. This includes repository reachability checks and version probes (agentkit.py), TypeScript and addon JavaScript checks (agentkit_ext.py), Git metadata lookup, resolver commands (agentkit_resolve.py), static analysis (agentkit_work.py), and watcher verification (agentkit_watch.py). Unit-test harnesses naturally continue to use subprocess APIs to launch the tools under test.
+
+The runner supports live stdout/stderr forwarding while retaining only bounded diagnostic tails, a progress callback for long-running operations, byte/line accounting, a shared deadline, and POSIX process-group cleanup. This allows user-facing commands to remain responsive without keeping unlimited captured output in memory. If a diagnostic report is truncated, the relevant checker returns or emits a LIMIT / truncation indication rather than silently claiming a complete inspection.
+
+Latest hosted validation: [GitHub Actions run 40156135136](https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/40156135136) passed all **98 unit tests**, Python compilation, POSIX shell syntax, change-ledger provenance, and local Markdown-link validation. This is hosted Ubuntu evidence; Termux/device runtime testing remains unverified.
