@@ -7,6 +7,7 @@ For every new task and every resumption after context loss, start with [AI_WORKF
 - [File changes](FILE_CHANGE_RULES.md): inspect first, preserve unrelated changes.
 - [Public data](PUBLIC_DATA_RULES.md): prevent secret/private-data exposure.
 - [Truth and errors](TRUTH_AND_ERROR_RULES.md): evidence, uncertainty and corrections.
+- [Android APK builds](ANDROID_BUILD_RULES.md): prohibit on-device compilation and route builds through GitHub Actions.
 - [Reports](SCOPE_AND_REPORT_RULES.md): summarize changes and validation.
 - [Commits](COMMIT_RULES.md): meaningful, traceable change units.
 - [Project documentation format](../DOCS/PROJECT_WORKFLOW.md): required work models / plan / cache / editing structure, transitions and handoff fields.
