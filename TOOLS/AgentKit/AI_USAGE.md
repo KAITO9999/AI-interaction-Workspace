@@ -1,6 +1,6 @@
 # AI Agent Usage Contract
 
-For every new task and every resumption after context loss, reread [the canonical AI workflow](../../AI_WORKFLOW.md), current workspace state and task list. Use the [prompt routing index](../../PROMPTS/README.md) and [project workflow](../../DOCS/PROJECT_WORKFLOW.md) to choose the smallest relevant instruction set. Do not load unrelated project caches or duplicate procedures.
+Follow the [canonical AI workflow](../../AI_WORKFLOW.md) for task startup and resumption. This contract covers tool selection and execution-environment routing; use the [prompt routing index](../../PROMPTS/README.md) and [project workflow](../../DOCS/PROJECT_WORKFLOW.md) only when relevant.
 
 ## Execution environment
 
