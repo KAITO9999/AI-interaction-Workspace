@@ -4,15 +4,9 @@ This is the single canonical cross-agent workflow. Agent-specific entry files sh
 
 ## Required reread route
 
-Run this route at the start of every new task and whenever work resumes after a context switch or possible context loss. Do not rely on chat history or remembered state in place of these files.
+At task start, read this workflow and inspect the current branch, active task and relevant files. Read the repository map, workspace state and task list when they help locate work or establish cross-project scope; they are not a mandatory bundle for a self-contained change.
 
-1. Read this file and the [repository map](DOCS/REPOSITORY_MAP.md).
-2. Read [workspace state](STATE/workspace_state.md) and [the task list](TASKS/tasks.md).
-3. If one specific project is in scope, reread its [work models](PROJECTS/README.md) entry and `IN_PROGRESS.md`; read its `PLAN.md` or `CACHE.md` only as needed. The canonical record format is in [Project documentation workflow](DOCS/PROJECT_WORKFLOW.md).
-4. Use [the rules index](RULES/README.md) to open only the rules relevant to the task.
-5. Inspect the current branch, target files, relevant history and active work before editing. State scope before changes.
-
-This route is intentionally short: reread the canonical workflow and current state every time, but do not bulk-load unrelated projects, caches or every rule.
+For a project-specific change, read that project's `WORK_MODELS.md` and `IN_PROGRESS.md`; consult `PLAN.md` or `CACHE.md` only when needed. Open only the rules and prompt procedures relevant to the task. After context loss, reload the active task/project state and the relevant canonical instructions rather than replaying unrelated reading steps.
 
 ## During work
 
@@ -52,7 +46,7 @@ Records append to `LOGS/change-ledger.jsonl`. Do not rewrite prior records or in
 ## Before reporting completion
 
 1. Run relevant checks and distinguish static inspection from runtime tests.
-2. Inspect the final diff and check Markdown links across the repository, not only the edited files.
+2. Inspect the final diff. Run the repository-wide Markdown-link check once for the final PR commit through CI; run it locally only when CI is unavailable or the final commit is not covered by CI.
 3. Ensure the project has the four canonical records; active work is in `IN_PROGRESS.md`, and completed items are moved from `PLAN.md` into `CACHE.md` with evidence.
 4. Report scope, changed files, checks actually run/results, unverified items and next steps.
 5. Keep the task open if a required validation did not run or failed.

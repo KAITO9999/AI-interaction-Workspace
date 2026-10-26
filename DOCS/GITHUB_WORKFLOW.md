@@ -6,7 +6,7 @@
 2. Follow the mandatory reread route in [AI_WORKFLOW.md](../AI_WORKFLOW.md) and check the current work scope before editing.
 3. Inspect existing files and active work; for a specific project, follow the [four-file project format](PROJECT_WORKFLOW.md) and record active implementation/bug fixes in `IN_PROGRESS.md`.
 4. Make a coherent change with relative links for in-repository references.
-5. Run relevant tests and the repository-wide local-link checker.
+5. Run relevant tests. Use the required repository-wide Markdown-link CI check for the final PR commit; run the local checker only when CI is unavailable or does not cover that commit.
 6. Open a Pull Request with scope, evidence, test results, provenance and remaining uncertainty.
 7. Merge only after review and required checks.
 

@@ -49,3 +49,13 @@ Current status: implementation is on branch `work/agentkit-mobile-profiles`; Git
 - **Regression coverage:** argv is passed without shell interpolation; timeout versus exit failure; missing executable; bounded capture with live output; progress callbacks; POSIX child-process group cleanup; symlinked explicit and discovered paths; empty target semantics; byte/file/finding/report-output limits; version-probe timeout; resolver, compiler, fetch-probe and watcher timeout propagation.
 - **Latest hosted validation:** [GitHub Actions run 40156135136](https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/40156135136) passed 98 tests plus Python compilation, POSIX shell syntax, change-ledger provenance and Markdown-link checks on Ubuntu. The latest logic pass also covered overall status precedence and output-capture failure handling.
 - **Unverified:** Termux and other target virtual-Linux process behavior. POSIX process-group termination is not a sandbox and cannot guarantee cleanup of descendants that deliberately detach into a new session. Keep PR #17 draft until target-environment verification is possible.
+
+### AK-DOCS-001 — Clarify AgentKit execution environment
+
+- **Status:** edits complete; awaiting PR review and repository CI.
+- **Actor:** AI.
+- **Work mode:** online (GitHub connector used to inspect and edit repository files).
+- **Scope:** clarify the execution location for AgentKit; remove repeated task-start/context-loss reread checklists; route repository-wide Markdown-link validation through the final PR CI run rather than duplicating it as a local mandatory step.
+- **Paths:** `AGENTS.md`, `AI_WORKFLOW.md`, `DOCS/PROJECT_WORKFLOW.md`, `PROMPTS/README.md`, `DOCS/GITHUB_WORKFLOW.md`, `TOOLS/AgentKit/AI_USAGE.md`, `PROJECTS/AgentKit/IN_PROGRESS.md`, `LOGS/change-ledger.jsonl`.
+- **Checks:** reviewed the canonical workflow and prompt routing after editing. PR CI is the intended final Markdown-link validation path; local check execution has not been performed in this session.
+

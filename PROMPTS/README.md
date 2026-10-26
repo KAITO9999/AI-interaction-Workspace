@@ -20,5 +20,5 @@ This is an index, not a second copy of the rules. Keep complete instructions in 
 - Do not paste the complete canonical workflow into agent-specific entry files.
 - Do not create a separate prompt for an operation already described in a canonical rule or tool guide; add a link instead.
 - Add a new use-case entry only when it has a distinct trigger, input, output and verification method.
-- When context may have been compressed or lost, re-read the short mandatory route. Do not attempt to save reading time by trusting remembered instructions or state.
+- After context loss, reload the canonical workflow and the current task/project state. Do not reread unrelated caches or all rules.
 - Project-specific procedures belong in that project's `WORK_MODELS.md`; current activity and transferable command results belong in `IN_PROGRESS.md`.
