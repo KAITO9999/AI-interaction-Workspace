@@ -56,6 +56,6 @@ Current status: implementation is on branch `work/agentkit-mobile-profiles`; Git
 - **Actor:** AI.
 - **Work mode:** online (GitHub connector used to inspect and edit repository files).
 - **Scope:** clarify the execution location for AgentKit; remove repeated task-start/context-loss reread checklists; route repository-wide Markdown-link validation through the final PR CI run rather than duplicating it as a local mandatory step.
-- **Paths:** `AI_WORKFLOW.md`, `DOCS/PROJECT_WORKFLOW.md`, `PROMPTS/README.md`, `DOCS/GITHUB_WORKFLOW.md`, `TOOLS/AgentKit/AI_USAGE.md`, `PROJECTS/AgentKit/IN_PROGRESS.md`, `LOGS/change-ledger.jsonl`.
+- **Paths:** `AGENTS.md`, `AI_WORKFLOW.md`, `DOCS/PROJECT_WORKFLOW.md`, `PROMPTS/README.md`, `DOCS/GITHUB_WORKFLOW.md`, `TOOLS/AgentKit/AI_USAGE.md`, `PROJECTS/AgentKit/IN_PROGRESS.md`, `LOGS/change-ledger.jsonl`.
 - **Checks:** reviewed the canonical workflow and prompt routing after editing. PR CI is the intended final Markdown-link validation path; local check execution has not been performed in this session.
 
