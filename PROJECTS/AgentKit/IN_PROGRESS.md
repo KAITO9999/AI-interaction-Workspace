@@ -49,3 +49,15 @@ Current status: implementation is on branch `work/agentkit-mobile-profiles`; Git
 - **Regression coverage:** argv is passed without shell interpolation; timeout versus exit failure; missing executable; bounded capture with live output; progress callbacks; POSIX child-process group cleanup; symlinked explicit and discovered paths; empty target semantics; byte/file/finding/report-output limits; version-probe timeout; resolver, compiler, fetch-probe and watcher timeout propagation.
 - **Latest hosted validation:** [GitHub Actions run 40156135136](https://github.com/KAITO9999/AI-interaction-Workspace/actions/runs/40156135136) passed 98 tests plus Python compilation, POSIX shell syntax, change-ledger provenance and Markdown-link checks on Ubuntu. The latest logic pass also covered overall status precedence and output-capture failure handling.
 - **Unverified:** Termux and other target virtual-Linux process behavior. POSIX process-group termination is not a sandbox and cannot guarantee cleanup of descendants that deliberately detach into a new session. Keep PR #17 draft until target-environment verification is possible.
+
+### AK-DOCS-001 — Clarify AgentKit environment routing
+
+- **Status:** active; instruction review and edit in progress.
+- **Actor:** AI.
+- **Work mode:** online (GitHub connector used to inspect and edit repository files).
+- **Scope:** clarify that AgentKit guidance primarily targets AI-provided virtual Linux environments where commands cannot be assumed installable, while keeping Termux and other manageable environments on a separate install-versus-fallback decision path. Review adjacent instruction wording for ambiguity, duplication, and unsupported assumptions.
+- **Paths:** `TOOLS/AgentKit/AI_USAGE.md`, `PROJECTS/AgentKit/IN_PROGRESS.md`, `LOGS/change-ledger.jsonl`.
+- **Checks:** repository instructions and current file contents inspected through GitHub connector. Markdown-link and CI checks not yet run.
+- **Classification:** FACT — the current AI usage contract already covers both connector retrieval and package-manager-aware resolver behavior, but does not explicitly state the priority of the AI-provided virtual Linux target environment. INTERPRETATION — this omission can lead agents to assume that package installation is always available or that AgentKit should be preferred even where installation is straightforward.
+- **Next action:** revise the canonical usage contract, inspect the resulting diff/content, append the change-ledger record, and report validation that was and was not performed.
+
