@@ -52,12 +52,12 @@ Current status: implementation is on branch `work/agentkit-mobile-profiles`; Git
 
 ### AK-DOCS-001 — Clarify AgentKit environment routing
 
-- **Status:** active; instruction review and edit in progress.
+- **Status:** edits complete; awaiting PR review and repository CI.
 - **Actor:** AI.
 - **Work mode:** online (GitHub connector used to inspect and edit repository files).
 - **Scope:** clarify that AgentKit guidance primarily targets AI-provided virtual Linux environments where commands cannot be assumed installable, while keeping Termux and other manageable environments on a separate install-versus-fallback decision path. Review adjacent instruction wording for ambiguity, duplication, and unsupported assumptions.
 - **Paths:** `TOOLS/AgentKit/AI_USAGE.md`, `PROJECTS/AgentKit/IN_PROGRESS.md`, `LOGS/change-ledger.jsonl`.
-- **Checks:** repository instructions and current file contents inspected through GitHub connector. Markdown-link and CI checks not yet run.
+- **Checks:** reviewed the updated `TOOLS/AgentKit/AI_USAGE.md` and appended change-ledger entry through GitHub connector. The duplicate repository-retrieval instruction was removed; retrieval probing now has a native fallback if AgentKit itself is unavailable. No local checkout was available for direct Markdown-link checks; PR CI remains pending.
 - **Classification:** FACT — the current AI usage contract already covers both connector retrieval and package-manager-aware resolver behavior, but does not explicitly state the priority of the AI-provided virtual Linux target environment. INTERPRETATION — this omission can lead agents to assume that package installation is always available or that AgentKit should be preferred even where installation is straightforward.
-- **Next action:** revise the canonical usage contract, inspect the resulting diff/content, append the change-ledger record, and report validation that was and was not performed.
+- **Next action:** open a draft PR, inspect the final branch contents, and use hosted CI/link validation where available. Target-environment smoke tests are not needed for this documentation-only change.
 
