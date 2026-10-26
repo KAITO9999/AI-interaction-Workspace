@@ -2,16 +2,11 @@
 
 For every new task and every resumption after context loss, reread [the canonical AI workflow](../../AI_WORKFLOW.md), current workspace state and task list. Use the [prompt routing index](../../PROMPTS/README.md) and [project workflow](../../DOCS/PROJECT_WORKFLOW.md) to choose the smallest relevant instruction set. Do not load unrelated project caches or duplicate procedures.
 
+## Execution environment
 
-## Environment selection and AgentKit applicability
+Choose the execution path according to where the task is being run. For GPT/Claude sessions, use the Linux environment provided to the AI and run AgentKit there. For Termux, a local machine, or another user-managed environment, use that environment's tools and package manager as appropriate. Do not confuse the AI interface with the environment that actually executes commands.
 
-AgentKit guidance primarily targets the Linux-like execution environments provided to AI agents by systems such as GPT or Claude, where the available command set, package installation, network access, privileges and persistence may be limited or unknown. Do not assume that a missing command can be installed in these environments.
-
-1. Identify the actual execution environment and verify which commands, files, network access and installation permissions are available. Distinguish the AI-provided virtual Linux environment from Termux, a user-managed host, a container with package-management access, or a remote/CI runner.
-2. In an AI-provided virtual Linux environment, first inspect the commands and capabilities already available, then consider AgentKit's documented helpers or bounded native alternatives. Treat package installation as unavailable unless it is explicitly supported and verified.
-3. In Termux or another environment the operator can manage, compare an existing command, an appropriate package installation, and an AgentKit fallback by compatibility, dependency cost, permissions, execution time and expected fidelity. Do not prefer a fallback merely because the command is initially absent; do not install a package when an adequate existing tool or fallback is safer and cheaper.
-4. AgentKit is a repository-provided helper, not an assumed preinstalled system command. Use it only when its source files are present or can be retrieved and its runtime prerequisites are available. If it cannot be run in the current environment, use the available repository connector or native tools and report that AgentKit itself was not executed.
-5. Keep environment-specific evidence separate. A successful hosted Linux check does not establish behavior in GPT/Claude's virtual environment or Termux; run a bounded smoke test in the actual target environment when that distinction matters.
+AgentKit is maintained in this repository; retrieve the relevant repository files into the execution environment before invoking it.
 
 
 ## Repository retrieval priority
