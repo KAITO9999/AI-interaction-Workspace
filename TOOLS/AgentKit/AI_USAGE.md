@@ -2,6 +2,18 @@
 
 For every new task and every resumption after context loss, reread [the canonical AI workflow](../../AI_WORKFLOW.md), current workspace state and task list. Use the [prompt routing index](../../PROMPTS/README.md) and [project workflow](../../DOCS/PROJECT_WORKFLOW.md) to choose the smallest relevant instruction set. Do not load unrelated project caches or duplicate procedures.
 
+
+## Environment selection and AgentKit applicability
+
+AgentKit guidance primarily targets the Linux-like execution environments provided to AI agents by systems such as GPT or Claude, where the available command set, package installation, network access, privileges and persistence may be limited or unknown. Do not assume that a missing command can be installed in these environments.
+
+1. Identify the actual execution environment and verify which commands, files, network access and installation permissions are available. Distinguish the AI-provided virtual Linux environment from Termux, a user-managed host, a container with package-management access, or a remote/CI runner.
+2. In an AI-provided virtual Linux environment, first inspect the commands and capabilities already available, then consider AgentKit's documented helpers or bounded native alternatives. Treat package installation as unavailable unless it is explicitly supported and verified.
+3. In Termux or another environment the operator can manage, compare an existing command, an appropriate package installation, and an AgentKit fallback by compatibility, dependency cost, permissions, execution time and expected fidelity. Do not prefer a fallback merely because the command is initially absent; do not install a package when an adequate existing tool or fallback is safer and cheaper.
+4. AgentKit is a repository-provided helper, not an assumed preinstalled system command. Use it only when its source files are present or can be retrieved and its runtime prerequisites are available. If it cannot be run in the current environment, use the available repository connector or native tools and report that AgentKit itself was not executed.
+5. Keep environment-specific evidence separate. A successful hosted Linux check does not establish behavior in GPT/Claude's virtual environment or Termux; run a bounded smoke test in the actual target environment when that distinction matters.
+
+
 ## Repository retrieval priority
 
 - Prefer downloading the relevant source files through the GitHub connector first, after confirming the repository and ref. Fetch only the files needed for the task.
@@ -10,21 +22,20 @@ For every new task and every resumption after context loss, reread [the canonica
 
 Before implementing a substitute tool:
 
-1. Run `python3 TOOLS/AgentKit/agentkit.py probe --root <explicit-root> --json <report.json>`.
-2. Run `python3 TOOLS/AgentKit/agentkit_ext.py commands --output /tmp/path-command-inventory.md` to enumerate executables found in PATH.
-3. Inspect the inventory and format-capability hints before writing or downloading anything.
+1. If AgentKit's files and runtime are available, run `python3 TOOLS/AgentKit/agentkit.py probe --root <explicit-root> --json <report.json>`.
+2. Run `python3 TOOLS/AgentKit/agentkit_ext.py commands --output /tmp/path-command-inventory.md` to enumerate executables found in PATH. If AgentKit cannot run, use native command discovery available in the current environment and state the limitation.
+3. Inspect the inventory and format-capability hints before writing, installing or downloading anything.
 4. If a suitable tool exists, inspect its help/version and run a bounded smoke test.
 5. Distinguish execution of a format from static inspection.
 6. Only if no adequate tool exists, inspect public source projects and verify license/provenance before copying.
-7. Prefer the GitHub connector for repository source download. If it cannot materialize files, use exact manual copy/paste for a small set of files; for bulk retrieval, run `fetch-probe` once and then try Git. On the first Git error/timeout, record it and stop that route without automatic retry.
-8. Use `locate` for specific line ranges instead of dumping whole files.
-9. Use `note` for concise handoff facts. `ingest` reads only explicitly supplied files/stdin and cannot access chat history by itself.
-10. Use `timer` for wall-clock waits; record local and UTC planned end times.
-11. Use `compile-ts` when the project contains TypeScript and a suitable `tsc` is available. Never auto-install packages through this helper.
-12. For a Minecraft `.mcaddon`/`.mcpack`, run `audit-addon` before claiming static validation. Use an in-world test when runtime behavior matters.
-13. Before finishing a work set, append a change-ledger record with explicit actor and mode. PR CI rejects missing/invalid provenance.
-14. For smartphone checks, use `mobile_test.py` to create a profile matrix; treat it as static preflight, not emulator/device runtime testing. Read [MOBILE_TESTING.md](MOBILE_TESTING.md).
-15. Report FACT / INTERPRETATION / DECISION / UNKNOWN separately. Never claim installation or testing without evidence.
+7. Use `locate` for specific line ranges instead of dumping whole files.
+8. Use `note` for concise handoff facts. `ingest` reads only explicitly supplied files/stdin and cannot access chat history by itself.
+9. Use `timer` for wall-clock waits; record local and UTC planned end times.
+10. Use `compile-ts` when the project contains TypeScript and a suitable `tsc` is available. Never auto-install packages through this helper.
+11. For a Minecraft `.mcaddon`/`.mcpack`, run `audit-addon` before claiming static validation. Use an in-world test when runtime behavior matters.
+12. Before finishing a work set, append a change-ledger record with explicit actor and mode. PR CI rejects missing/invalid provenance.
+13. For smartphone checks, use `mobile_test.py` to create a profile matrix; treat it as static preflight, not emulator/device runtime testing. Read [MOBILE_TESTING.md](MOBILE_TESTING.md).
+14. Report FACT / INTERPRETATION / DECISION / UNKNOWN separately. Never claim installation or testing without evidence.
 
 ## Online / offline mode
 
