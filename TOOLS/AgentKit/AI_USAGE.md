@@ -18,11 +18,11 @@ AgentKit guidance primarily targets the Linux-like execution environments provid
 
 - Prefer downloading the relevant source files through the GitHub connector first, after confirming the repository and ref. Fetch only the files needed for the task.
 - If connector retrieval cannot place files into the execution environment, copy and paste the exact required files from the connector output, preserving paths and UTF-8 content.
-- For bulk source retrieval or when copy/paste is impractical, try Git retrieval (for example, a bounded `git clone`/`git fetch`) after the connector route. Run `fetch-probe` once before the Git retrieval attempt; stop that route on its first error or timeout and do not automatically retry it. Record which route actually worked.
+- For bulk source retrieval or when copy/paste is impractical, try Git retrieval (for example, a bounded `git clone`/`git fetch`) after the connector route. If AgentKit is available, run `fetch-probe` once before the Git retrieval attempt; if AgentKit is unavailable, use one bounded native `git ls-remote` probe instead. Stop the Git retrieval route on its first error or timeout and do not automatically retry it. Record which route actually worked.
 
 Before implementing a substitute tool:
 
-1. If AgentKit's files and runtime are available, run `python3 TOOLS/AgentKit/agentkit.py probe --root <explicit-root> --json <report.json>`.
+1. If AgentKit's source files and a compatible Python runtime are available, run `python3 TOOLS/AgentKit/agentkit.py probe --root <explicit-root> --json <report.json>`. Do not install Python solely to bootstrap AgentKit without first comparing the cost and value of that setup.
 2. Run `python3 TOOLS/AgentKit/agentkit_ext.py commands --output /tmp/path-command-inventory.md` to enumerate executables found in PATH. If AgentKit cannot run, use native command discovery available in the current environment and state the limitation.
 3. Inspect the inventory and format-capability hints before writing, installing or downloading anything.
 4. If a suitable tool exists, inspect its help/version and run a bounded smoke test.
