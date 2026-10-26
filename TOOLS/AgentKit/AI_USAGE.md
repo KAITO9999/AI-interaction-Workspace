@@ -16,9 +16,9 @@ AgentKit guidance primarily targets the Linux-like execution environments provid
 
 ## Repository retrieval priority
 
-- Prefer downloading the relevant source files through the GitHub connector first, after confirming the repository and ref. Fetch only the files needed for the task.
-- If connector retrieval cannot place files into the execution environment, copy and paste the exact required files from the connector output, preserving paths and UTF-8 content.
-- For bulk source retrieval or when copy/paste is impractical, try Git retrieval (for example, a bounded `git clone`/`git fetch`) after the connector route. If AgentKit is available, run `fetch-probe` once before the Git retrieval attempt; if AgentKit is unavailable, use one bounded native `git ls-remote` probe instead. Stop the Git retrieval route on its first error or timeout and do not automatically retry it. Record which route actually worked.
+- When a GitHub connector is available, prefer retrieving only the relevant source files through it after confirming the repository and ref.
+- If the connector is unavailable, or retrieval cannot place files into the execution environment, copy and paste the exact required files from connector output when available, preserving paths and UTF-8 content. If no connector output is available, proceed to the bounded Git route below rather than waiting for an unavailable integration.
+- For bulk source retrieval or when copy/paste is impractical, try Git retrieval (for example, a bounded `git clone`/`git fetch`) after the connector route when that route is available. If AgentKit is available, run `fetch-probe` once before the Git retrieval attempt; if AgentKit is unavailable, use one bounded native `git ls-remote` probe instead. Stop the Git retrieval route on its first error or timeout and do not automatically retry it. Record which route actually worked.
 
 Before implementing a substitute tool:
 
