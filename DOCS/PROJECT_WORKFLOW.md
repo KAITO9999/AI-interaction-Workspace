@@ -37,20 +37,14 @@ Use one entry per handoff or tightly related command set in the project's `IN_PR
 
 Do not paste huge logs, secrets, raw private prompts, personal data or machine-local paths into the public repository. Store large safe logs as artifacts when available and cite their path. If no durable artifact exists, include only the minimum relevant output and state that the full output was not saved.
 
-## Prompt reading and rereading route
+## Prompt and context routing
 
-Every new task and every resumption after a context switch must start with this short route:
-
-1. Read [AGENTS.md](../AGENTS.md) and [AI_WORKFLOW.md](../AI_WORKFLOW.md).
-2. Read [workspace state](../STATE/workspace_state.md), [task list](../TASKS/tasks.md), and [repository map](REPOSITORY_MAP.md).
-3. If a specific project is in scope, read that project's `WORK_MODELS.md` and `IN_PROGRESS.md`; open `PLAN.md` or `CACHE.md` only as needed for that task.
-4. Follow the relevant entries in the [rules index](../RULES/README.md) and the [prompt/use-case index](../PROMPTS/README.md). Do not load unrelated project caches or every rule file by default.
-5. Re-read the same route after context loss or when resuming work. This deliberate reread is required; it is not replaced by chat history or memory.
+Use the [canonical AI workflow](../AI_WORKFLOW.md) for task startup and resumption. This file defines project-record lifecycle and handoff format; it does not introduce a second startup checklist.
 
 ## Required checks before closing a work set
 
 - Check that every project-specific path referenced from navigation or prompts exists.
-- Check links in all Markdown files, not only the files just edited.
+- Ensure the final PR commit is covered by the repository-wide Markdown-link CI check. Run the local checker only when CI is unavailable or does not cover the final commit.
 - Confirm every active project has the four-file format and every plan item has completion criteria.
 - Confirm active bugs/implementation are in `IN_PROGRESS.md`, and completed items have been moved from `PLAN.md` into `CACHE.md` with evidence.
 - Confirm a reader can reach the format rule from [AGENTS.md](../AGENTS.md), [AI_WORKFLOW.md](../AI_WORKFLOW.md), [repository map](REPOSITORY_MAP.md), and [project index](../PROJECTS/README.md).
