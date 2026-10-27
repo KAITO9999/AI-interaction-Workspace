@@ -90,14 +90,15 @@ Append one record per related command set so another AI/person can consume resul
 - Runtime: not tested in Bedrock.
 
 
+
 ### RFV-410 — Sun/moon texture refresh and staged candle-color utility lights
 
-- **Status:** implementing; static verification pending
+- **Status:** candidate built; static checks passed; P4 runtime validation pending
 - **Actor:** AI
-- **Work mode:** mixed (local archive inspection/editing plus official/public source and GitHub/GitLab review)
-- **Scope:** create a local 4.1.0 candidate from the supplied 4.0.6 artifact; add only the Bedrock sky texture paths `textures/environment/sun.png`, `sun_vv.png`, and `moon_phases.png`; add four custom candle-mood light-block identifiers with distinct local-light colors and emission levels; align both manifests/dependencies and changelog to 4.1.0.
-- **Baseline evidence:** local source artifact reports BP/RP 4.0.6. The current GitHub project record describes a separate 3.24.6 candidate line; this task does not overwrite or imply binary parity with that line. GitLab's older implementation plan was reviewed and is unrelated to candle lighting (it focuses on light shafts/cache work). GitHub remains the planning destination.
-- **Design constraint:** local-light JSON is keyed by block identifier, not the vanilla candle's `candles` state. The helper blocks therefore provide explicit 1/4–4/4 color/intensity variants; automatic recoloring of ordinary vanilla candle clusters is not claimed.
-- **Acceptance:** target PNG paths/layout/dimensions validated; all modified JSON parses; manifests and dependency versions align; archive CRC/path checks pass; existing lighting engine, PBR subpacks and unrelated sky/atmosphere configs remain intact.
-- **Runtime limitation:** no Bedrock/Vibrant Visuals launch is available in this work session; visual scale, glow, local-light shadows and Content Log behavior must remain marked unverified.
-- **Next action:** finish textures and block definitions, build the candidate and standalone sky-only test pack, run the targeted static checks, then update the handoff/cache with exact observed results.
+- **Work mode:** mixed (local archive/asset work plus official/public source and GitHub/GitLab review)
+- **Scope:** generated a local 4.1.0 candidate from the supplied 4.0.6 artifact; added only the Bedrock sky texture paths `textures/environment/sun.png`, `sun_vv.png`, and `moon_phases.png`; added four custom candle-color helper blocks and matching RP local-light settings; aligned BP/RP manifests, reciprocal dependency and changelog to 4.1.0.
+- **Baseline evidence:** the local input reports BP/RP 4.0.6. The public GitHub project record describes a separate 3.24.6 line. This work does not overwrite or imply binary parity with that line. The reviewed GitLab plan concerns light shafts/cache work, not candles; GitHub remains the planning destination.
+- **Implemented:** default 12×12 logical sun, matching VV variant, eight moon phases; separate 8×8 and 16×16 standalone size-test packs; four point-light blocks with level/color pairs 3/`#FFF0E8`, 6/`#F4A9C4`, 9/`#E95F79`, 12/`#FF302E`; visible hotbar icons for transparent helper blocks. Ordinary vanilla candle block states are not automatically remapped to these four IDs.
+- **Checks run:** `python build_reforge_410.py`; `python verify_reforge_410.py`. Static verification reports 2,008 JSON parses with duplicate-key rejection and 12 JavaScript syntax checks; main and nested archive CRC/path checks; manifest/dependency/version alignment; unchanged external API versions; unchanged PBR subpack ordering; PNG dimensions/decoding; helper-block/icon/local-light agreement; exact path delta (five changed, eleven added, zero removed). Evidence output: local `ReForge_Visuals-4.1.0-build-report.json`.
+- **Unknown / not run:** no Bedrock launch, in-world screen capture, Content Log test, or target-device check. Sun apparent scale, VV bloom, moon phase mapping, colored point-light appearance and block interaction remain unverified.
+- **Next action / receiver:** complete [P4 in PLAN.md](PLAN.md) in a real Bedrock world. Test both graphics modes, compare 8×8/12×12/16×16 test packs one at a time, and verify helper-block placement/removal and all PBR tiers before claiming runtime completion.
