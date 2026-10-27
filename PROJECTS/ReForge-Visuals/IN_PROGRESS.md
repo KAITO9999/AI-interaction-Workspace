@@ -88,3 +88,16 @@ Append one record per related command set so another AI/person can consume resul
 - Verification: ZIP CRC, duplicate paths, all 1,357 JSON parses, manifest versions 3.24.6, profile/default agreement and exceptions all pass.
 - Artifact: ReForge_Visuals-3.24.6.mcaddon; SHA-256 9985a0619b1c8a29cfe7c78bffddfd40e5fc7389809da8711179622ee6e14a90.
 - Runtime: not tested in Bedrock.
+
+
+### RFV-410 — Sun/moon texture refresh and staged candle-color utility lights
+
+- **Status:** implementing; static verification pending
+- **Actor:** AI
+- **Work mode:** mixed (local archive inspection/editing plus official/public source and GitHub/GitLab review)
+- **Scope:** create a local 4.1.0 candidate from the supplied 4.0.6 artifact; add only the Bedrock sky texture paths `textures/environment/sun.png`, `sun_vv.png`, and `moon_phases.png`; add four custom candle-mood light-block identifiers with distinct local-light colors and emission levels; align both manifests/dependencies and changelog to 4.1.0.
+- **Baseline evidence:** local source artifact reports BP/RP 4.0.6. The current GitHub project record describes a separate 3.24.6 candidate line; this task does not overwrite or imply binary parity with that line. GitLab's older implementation plan was reviewed and is unrelated to candle lighting (it focuses on light shafts/cache work). GitHub remains the planning destination.
+- **Design constraint:** local-light JSON is keyed by block identifier, not the vanilla candle's `candles` state. The helper blocks therefore provide explicit 1/4–4/4 color/intensity variants; automatic recoloring of ordinary vanilla candle clusters is not claimed.
+- **Acceptance:** target PNG paths/layout/dimensions validated; all modified JSON parses; manifests and dependency versions align; archive CRC/path checks pass; existing lighting engine, PBR subpacks and unrelated sky/atmosphere configs remain intact.
+- **Runtime limitation:** no Bedrock/Vibrant Visuals launch is available in this work session; visual scale, glow, local-light shadows and Content Log behavior must remain marked unverified.
+- **Next action:** finish textures and block definitions, build the candidate and standalone sky-only test pack, run the targeted static checks, then update the handoff/cache with exact observed results.
