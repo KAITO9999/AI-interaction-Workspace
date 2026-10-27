@@ -6,7 +6,7 @@ Status: reusable procedure; no gameplay-code edit is currently active.
 
 **Use when:** reviewing a release, investigating a defect, or considering an optimization.
 
-**Inputs:** exact `.mcaddon` artifact, target Minecraft/Script API version, current project records, and a concrete question or reproducible observation.
+**Inputs:** exact `.mcaddon` artifact, target Bedrock/Script API version, current project records, and a concrete question or reproducible observation.
 
 **Procedure:**
 1. Identify the artifact/version; inspect manifests and archive structure.
@@ -29,6 +29,21 @@ Status: reusable procedure; no gameplay-code edit is currently active.
 4. Make the smallest scoped correction and add/identify a regression check where possible.
 5. Run independent checks and report failures exactly; do not turn missing runtime testing into a pass.
 6. Only move the item from `PLAN.md` into the completed section of `CACHE.md` when its completion criteria are met.
+
+## Model C — texture atlas + local-light block extension
+
+**Use when:** adding sky textures or color/brightness variants for custom light-emitting blocks.
+
+1. Verify exact asset paths and atlas dimensions from the matching Bedrock sample/resource version before writing replacement textures.
+2. Preserve unrelated sky, cloud, atmosphere and lighting JSON so that texture changes remain composable with other packs.
+3. Use nearest-neighbor pixel-art construction at the engine's expected dimensions; validate alpha, layout, phase order and PNG dimensions by script.
+4. For per-state lighting that cannot be represented by the current JSON key, prefer distinct custom block identifiers with explicit light emission and local-light color entries. Do not claim vanilla block states are dynamically recolored unless a runtime path actually supports it.
+5. Keep new helper-block IDs isolated from `HAND_LIGHT_PREFIX` / the existing dynamic source cleanup set; document exact IDs and practical placement method.
+6. Run archive integrity, JSON duplicate-key/schema-shape checks, manifest/dependency alignment and targeted asset tests. Real Bedrock/VV rendering and Content Log remain separate acceptance gates.
+
+**Acceptance:** the pack contains only the intended sun/moon overrides and scoped helper blocks; existing subpacks, manifest UUIDs, dependency versions, and unrelated lighting behavior remain unchanged.
+
+**Limits:** local-light configuration is keyed by block identifier; static validation cannot prove that sky textures render at the intended apparent size or that point-light shadows/colors look correct on every device.
 
 ## Duplicate-route exclusions
 
