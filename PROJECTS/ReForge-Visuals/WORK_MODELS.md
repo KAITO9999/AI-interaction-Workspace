@@ -10,7 +10,7 @@ Status: reusable procedures; the active 4.1.0 candidate and its runtime-validati
 
 **Procedure:**
 1. Identify the artifact/version; inspect manifests and archive structure.
-2. Run `TOOLS/AgentKit/agentkit_ext.py audit-addon` as the canonical first static package audit; do not maintain a parallel equivalent audit route.
+2. Run `TOOLS/AgentKit/agentkit_ext.py audit-addon` as the canonical first static package audit; do not maintain a parallel equivalent audit route. If the artifact and checkout/tool are not co-located in the active environment, record the canonical audit as NOT RUN and label any targeted checks as supplementary—not as an equivalent AgentKit result.
 3. Investigate reported concerns at the relevant source and reproduce the specific issue before proposing a fix.
 4. Keep `performance_engine.js` as the primary scheduler/queue/budget path. Do not add a second scheduler or duplicate scan path without evidence.
 5. For performance work, record suspected hot path, call frequency, expected visual/gameplay effect, measurement setup, and rollback point before editing.
@@ -39,7 +39,7 @@ Status: reusable procedures; the active 4.1.0 candidate and its runtime-validati
 3. Use nearest-neighbor pixel-art construction at the engine's expected dimensions; validate alpha, layout, phase order and PNG dimensions by script.
 4. For per-state lighting that cannot be represented by the current JSON key, prefer distinct custom block identifiers with explicit light emission and local-light color entries. Do not claim vanilla block states are dynamically recolored unless a runtime path actually supports it.
 5. Keep new helper-block IDs isolated from `HAND_LIGHT_PREFIX` / the existing dynamic source cleanup set; document exact IDs and practical placement method.
-6. Run archive integrity, JSON duplicate-key/schema-shape checks, manifest/dependency alignment and targeted asset tests. Real Bedrock/VV rendering and Content Log remain separate acceptance gates.
+6. Run the canonical AgentKit add-on audit when available, then record archive integrity, JSON duplicate-key/schema-shape checks, manifest/dependency alignment and targeted asset tests. If the canonical CLI is unavailable, state that limit explicitly. Real Bedrock/VV rendering and Content Log remain separate acceptance gates.
 
 **Acceptance:** the pack contains only the intended sun/moon overrides and scoped helper blocks; existing subpacks, manifest UUIDs, dependency versions, and unrelated lighting behavior remain unchanged.
 
