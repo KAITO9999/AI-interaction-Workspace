@@ -10,7 +10,8 @@ Last updated: 2026-10-27
 - The canonical project format is defined in [DOCS/PROJECT_WORKFLOW.md](../DOCS/PROJECT_WORKFLOW.md): `WORK_MODELS.md`, `PLAN.md`, `CACHE.md`, `IN_PROGRESS.md`.
 - Prompt entrypoints are grouped by purpose in [PROMPTS/README.md](../PROMPTS/README.md); `AGENTS.md` and `AI_WORKFLOW.md` define the reread route for new tasks and resumptions.
 - A local ReForge Visuals 3.24.2 candidate was generated from the supplied 3.24.1 artifact. Full static audit on a clean extraction reported 0 findings, and 8 regression tests passed. The audit report and candidate are handoff files, not committed binary assets.
-- Candidate static audit: 1,149 JSON files parsed with duplicate-key detection; 12 JavaScript files syntax/import checked; 513 fog IDs and 338 fog references checked; water definitions/schema checked across all six subpacks; 12 OGG and 9 PNG assets checked; ZIP CRC/path checks passed.\n- A separate local ReForge Visuals 4.1.0 sidecar candidate was generated from supplied 4.0.6 source. Its 2,008-JSON/12-JS static checks, manifests, sky PNGs, four candle-color helper blocks and archive checks passed. This is not the public 3.24.6 candidate line; binary artifacts remain local and are not committed.
+- Candidate static audit: 1,149 JSON files parsed with duplicate-key detection; 12 JavaScript files syntax/import checked; 513 fog IDs and 338 fog references checked; water definitions/schema checked across all six subpacks; 12 OGG and 9 PNG assets checked; ZIP CRC/path checks passed.
+- A separate local ReForge Visuals 4.1.0 sidecar candidate was generated from supplied 4.0.6 source. Its 2,008-JSON/12-JS static checks, manifests, sky PNGs, four candle-color helper blocks and archive checks passed. This is not the public 3.24.6 candidate line; binary artifacts remain local and are not committed.
 - The candidate includes a water-tint adjustment and statically identified corrections; see [ReForge cache](../PROJECTS/ReForge-Visuals/CACHE.md) and [active validation handoff](../PROJECTS/ReForge-Visuals/IN_PROGRESS.md).
 - AgentKit extensions are implemented for PATH executable inventory, tsc-based TypeScript compilation, append-only actor/mode provenance, static mcaddon/mcpack audit, safe command resolution, and smartphone profile compatibility preflight.
 - Smartphone profile budgets are 4/8/12/16 GB; low-end defaults to Android 11/API 30, mid-end to Android 15/API 35, and higher tiers have no default Android-version target. See [AgentKit smartphone profile docs](../TOOLS/AgentKit/MOBILE_TESTING.md).
@@ -18,7 +19,8 @@ Last updated: 2026-10-27
 
 ## Not implemented / not verified
 
-- ReForge Visuals 3.24.2 has not been loaded in a real Bedrock world; its exact water appearance is not verified.\n- The separate 4.1.0 sidecar has not been loaded in Bedrock; sun-size choice, VV/non-VV render appearance, moon phase mapping, point-light colors, Content Log and target-device compatibility are unverified. See [P4](../PROJECTS/ReForge-Visuals/PLAN.md).
+- ReForge Visuals 3.24.2 has not been loaded in a real Bedrock world; its exact water appearance is not verified.
+- The separate 4.1.0 sidecar has not been loaded in Bedrock; sun-size choice, VV/non-VV render appearance, moon phase mapping, point-light colors, Content Log and target-device compatibility are unverified. See [P4](../PROJECTS/ReForge-Visuals/PLAN.md).
 - Bedrock Content Log output, target-device behavior, and multiplayer performance remain pending.
 - Runtime frame/tick performance or multiplayer-load measurements have not been performed.
 - TypeScript compilation against representative real projects with their own tsconfig.json remains untested; automated tests use a stub compiler for invocation.
