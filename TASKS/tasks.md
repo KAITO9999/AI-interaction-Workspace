@@ -58,5 +58,5 @@
 
 ## ReForge Visuals 4.1.0 sidecar candidate
 
-- [x] Build the local 4.1.0 candidate from the supplied 4.0.6 artifact and pass static package, JSON, manifest/dependency, texture-layout and archive checks; see [ReForge Visuals cache](../PROJECTS/ReForge-Visuals/CACHE.md).
+- [x] Build the local 4.1.0 candidate from the supplied 4.0.6 artifact and pass targeted JSON, manifest/dependency, texture-layout and archive checks (canonical AgentKit audit remains pending); see [ReForge Visuals cache](../PROJECTS/ReForge-Visuals/CACHE.md).
 - [ ] Validate candidate 4.1.0 in a real Bedrock world with VV and non-VV; compare the 8×8/12×12/16×16 sun packs one at a time; inspect moon phases, candle helper-light colors, subpack compatibility and Content Log; see [P4](../PROJECTS/ReForge-Visuals/PLAN.md).
