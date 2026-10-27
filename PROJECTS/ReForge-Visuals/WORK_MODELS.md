@@ -1,6 +1,6 @@
 # ReForge Visuals — work models
 
-Status: reusable procedure; no gameplay-code edit is currently active.
+Status: reusable procedures; the active 4.1.0 candidate and its runtime-validation handoff are tracked in IN_PROGRESS.md.
 
 ## Model A — source-first, evidence-gated review and optimization
 
