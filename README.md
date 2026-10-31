@@ -1,44 +1,49 @@
 # AI Interaction Workspace
 
-公開AIが共通の作業資料を読み、変更を提案・検証できるためのワークスペースです。GitHubを公開コラボレーションの入口にします。
+公開AIが共通の作業資料を読み、変更を提案・検証するためのワークスペース。GitHub を公開コラボレーションの入口にする。
 
-## Start here
+## Start here (AI)
 
-1. AI workflow — shared procedure and mandatory reread route ([AI_WORKFLOW.md](AI_WORKFLOW.md))
-2. Prompt routing — purpose-based entrypoints without duplicated instructions ([PROMPTS/README.md](PROMPTS/README.md))
-3. Repository map — where documents and tools belong ([DOCS/REPOSITORY_MAP.md](DOCS/REPOSITORY_MAP.md))
-4. Project format — work models, plan, cache, editing and handoff lifecycle ([DOCS/PROJECT_WORKFLOW.md](DOCS/PROJECT_WORKFLOW.md))
-5. Workspace rules — read only the rules relevant to the task ([RULES/README.md](RULES/README.md))
-6. Current state — verified status and known limits ([STATE/workspace_state.md](STATE/workspace_state.md))
-7. Tasks — actionable backlog ([TASKS/tasks.md](TASKS/tasks.md))
-8. AgentKit — environment discovery and engineering helpers ([TOOLS/AgentKit/README.md](TOOLS/AgentKit/README.md))
-9. GitLab parity audit — migration mapping and intentional omissions ([DOCS/GITLAB_PARITY_AUDIT.md](DOCS/GITLAB_PARITY_AUDIT.md))
+**毎回この短い順だけ読む。全部は読まない。**
 
-## For AI coding agents
+1. [AGENTS.md](AGENTS.md)
+2. [AI_WORKFLOW.md](AI_WORKFLOW.md)
+3. [STATE/workspace_state.md](STATE/workspace_state.md)
+4. [TASKS/tasks.md](TASKS/tasks.md)（流し読みで可）
 
-- [AGENTS.md](AGENTS.md) is the short cross-agent entry point; [CLAUDE.md](CLAUDE.md) routes Claude Code to the same canonical workflow.
-- At every new task and every resume after context loss, reread the short route. Do not read all rules or project caches unless relevant.
-- For a specific project, use the four-file format defined in [Project documentation workflow](DOCS/PROJECT_WORKFLOW.md): `WORK_MODELS.md`, `PLAN.md`, `CACHE.md`, and `IN_PROGRESS.md`.
-- Keep facts, interpretations, decisions, unknowns, test results and limitations distinct.
-- Before opening a PR, record changed paths with AgentKit and review the public-safe ledger entry.
+追加はタスクに合わせて **1ファイルだけ**:
 
-## Repository layout
+| 用途 | ファイル |
+|---|---|
+| 指示の振り分け | [PROMPTS/README.md](PROMPTS/README.md) |
+| 地図・読み忘れ防止 | [DOCS/REPOSITORY_MAP.md](DOCS/REPOSITORY_MAP.md) |
+| プロジェクト4ファイル | [DOCS/PROJECT_WORKFLOW.md](DOCS/PROJECT_WORKFLOW.md) |
+| ルール索引 | [RULES/README.md](RULES/README.md) |
+| ツール | [TOOLS/AgentKit/README.md](TOOLS/AgentKit/README.md) |
+
+非自明作業の詳細手順は `PROMPTS/work-assist/` 内の **名前が内容を示す** 単一ファイルを必要時のみ開く（workflow / environment / debug-and-reuse / quality-and-migration / research-and-instructions）。
+
+## For agents
+
+- 新タスク・文脈喪失のたびに上記ショートルートを再読。記憶や会話履歴で代替しない
+- 無関係な `PROJECTS/*` や RULES 全件、work-assist 全件を読まない
+- 事実 / 解釈 / 決定 / 未確認 / 検証結果を分けて書く
+- PR 前に AgentKit で変更パスを記録し、公開してよい要約だけ ledger へ
+
+## Public / private
+
+このリポジトリは **公開**。会話生データ・個人情報・認証情報・非公開URLを入れない。  
+端末固有の長い診断ログは **[AI-interaction-Private-Workspace](https://github.com/KAITO9999/AI-interaction-Private-Workspace)**（非公開）へ。境界は [SPACE_CLASSIFICATION](DOCS/SPACE_CLASSIFICATION.md) と [PUBLIC_DATA_RULES](RULES/PUBLIC_DATA_RULES.md)。
+
+## Layout
 
 | Path | Purpose |
 |---|---|
-| PROMPTS/ | Purpose-based prompt and instruction routing |
-| RULES/ | Canonical collaboration and safety rules |
-| DOCS/ | Navigation, project format, source boundaries, parity audit and GitHub workflow |
-| STATE/ | Shared verified state and known limitations |
-| TASKS/ | Actionable backlog |
-| TOOLS/ | Reusable tools and tests |
-| PROJECTS/ | Project-specific four-file records; read only the current project |
-| LOGS/change-ledger.jsonl | Append-only actor/mode/path provenance |
-
-## Public/private boundary
-
-This repository is public. Do not add raw conversations, personal data, credentials, private source material or private workspace URLs. Ledger records must contain only concise, public-safe summaries and changed paths. Never put prompts or sensitive data in them. See [public-data rules](RULES/PUBLIC_DATA_RULES.md).
-
-## Source and migration
-
-This repository was prepared from the public [GitLab AI Integration Workspace](https://gitlab.com/ai-work-space2/ai-integration-workspace), with links and layout adapted for GitHub. The [parity audit](DOCS/GITLAB_PARITY_AUDIT.md) explains which items were preserved, transformed or intentionally omitted.
+| PROMPTS/ | 用途別ルーティング + work-assist |
+| RULES/ | 制約 |
+| DOCS/ | 地図・形式・GitHub手順 |
+| STATE/ | 検証済み状態 |
+| TASKS/ | バックログ |
+| TOOLS/ | AgentKit |
+| PROJECTS/ | プロジェクト別4ファイル |
+| LOGS/ | 変更 provenance |

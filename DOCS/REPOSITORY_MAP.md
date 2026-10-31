@@ -1,25 +1,57 @@
 # Repository map
 
-| Location | Read when | Contents |
-|---|---|---|
-| [AGENTS.md](../AGENTS.md) | Every task/resume | Short agent entry and mandatory reread route |
-| [AI_WORKFLOW.md](../AI_WORKFLOW.md) | Every task/resume | Canonical workflow, evidence labels and provenance |
-| [PROMPTS/README.md](../PROMPTS/README.md) | Selecting instructions | Use-case routing without duplicated prompts |
-| [RULES/README.md](../RULES/README.md) | Choosing constraints | Rule index and when each rule applies |
-| [STATE/workspace_state.md](../STATE/workspace_state.md) | Before work | Verified state, blockers and known limits |
-| [TASKS/tasks.md](../TASKS/tasks.md) | Planning | Actionable backlog |
-| [DOCS/PROJECT_WORKFLOW.md](PROJECT_WORKFLOW.md) | Starting/resuming a project | Four-file format, task transitions and AI/person handoff |
-| [PROJECTS/README.md](../PROJECTS/README.md) | Project-specific work | Project record index and reread policy |
-| [TOOLS/AgentKit/README.md](../TOOLS/AgentKit/README.md) | Environment/tool probing | Core CLI and extension CLI |
-| [TOOLS/AgentKit/AI_USAGE.md](../TOOLS/AgentKit/AI_USAGE.md) | Selecting tool routes | Probe tools before creating substitutes |
-| [DOCS/SPACE_CLASSIFICATION.md](SPACE_CLASSIFICATION.md) | Handling data | Public/private boundaries |
-| [DOCS/GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) | Publishing changes | Branch, PR and CI procedure |
-| [RULES/ANDROID_BUILD_RULES.md](../RULES/ANDROID_BUILD_RULES.md) | Android/APK build tasks | On-device build refusal and GitHub-hosted build route |
-| [DOCS/GITLAB_PARITY_AUDIT.md](GITLAB_PARITY_AUDIT.md) | Migration/source comparison | Mapping and intentional omissions |
-| [PROJECTS/ReForge-Visuals/WORK_MODELS.md](../PROJECTS/ReForge-Visuals/WORK_MODELS.md) | ReForge task only | Work models and duplicate-route exclusions |
-| [PROJECTS/ReForge-Visuals/PLAN.md](../PROJECTS/ReForge-Visuals/PLAN.md) | ReForge planning | Pending runtime validation only |
-| [PROJECTS/ReForge-Visuals/CACHE.md](../PROJECTS/ReForge-Visuals/CACHE.md) | ReForge fact/decision lookup | Static evidence, decisions, completed items |
-| [PROJECTS/ReForge-Visuals/IN_PROGRESS.md](../PROJECTS/ReForge-Visuals/IN_PROGRESS.md) | ReForge active work/handoff | Current edits and transferable command results |
-| [LOGS/change-ledger.jsonl](../LOGS/change-ledger.jsonl) | Provenance review | Append-only actor/mode/path records |
+## Mandatory short route (every task / resume)
 
-Do not load project-specific plans or caches for unrelated tasks. Every new task and resumption after context loss must reread the short canonical route; project records are then selected by relevance.
+Read **only** these, in order. Do not bulk-load the rest.
+
+1. [AGENTS.md](../AGENTS.md) — entry
+2. [AI_WORKFLOW.md](../AI_WORKFLOW.md) — procedure
+3. [STATE/workspace_state.md](../STATE/workspace_state.md) — verified / blockers
+4. [TASKS/tasks.md](../TASKS/tasks.md) — backlog (skim)
+
+Then open **one** more file only if the task matches the "Read when" column below.
+
+## Do not read by default
+
+- Other projects under `PROJECTS/` (only the named project)
+- Full `RULES/` set (use [RULES/README.md](../RULES/README.md) to pick one)
+- Full `PROMPTS/work-assist/` (open one file by name when needed)
+- `LOGS/change-ledger.jsonl` (only when provenance/PR)
+- `DOCS/GITLAB_PARITY_AUDIT.md` (migration only)
+- Private workspace content or URLs (never into public commits)
+
+## Situation → file
+
+| Situation | Open |
+|---|---|
+| New task / context loss | Mandatory route above |
+| Pick instruction by purpose | [PROMPTS/README.md](../PROMPTS/README.md) |
+| Non-trivial work steps | [PROMPTS/work-assist/workflow.md](../PROMPTS/work-assist/workflow.md) |
+| Env / missing commands | [PROMPTS/work-assist/environment.md](../PROMPTS/work-assist/environment.md) or [TOOLS/AgentKit](../TOOLS/AgentKit/README.md) |
+| Bugs / reuse / upstream | [PROMPTS/work-assist/debug-and-reuse.md](../PROMPTS/work-assist/debug-and-reuse.md) |
+| Structure / language choice | [PROMPTS/work-assist/quality-and-migration.md](../PROMPTS/work-assist/quality-and-migration.md) |
+| UI / visual / search ideation | [PROMPTS/work-assist/research-and-instructions.md](../PROMPTS/work-assist/research-and-instructions.md) |
+| Project lifecycle four files | [DOCS/PROJECT_WORKFLOW.md](PROJECT_WORKFLOW.md) |
+| Named project active work | `PROJECTS/<name>/IN_PROGRESS.md` (+ WORK_MODELS if needed) |
+| Android / APK build | [RULES/ANDROID_BUILD_RULES.md](../RULES/ANDROID_BUILD_RULES.md) |
+| Public vs private data | [DOCS/SPACE_CLASSIFICATION.md](SPACE_CLASSIFICATION.md) |
+| PR / branch / CI | [DOCS/GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) |
+| Private diagnostics only | Use **AI-interaction-Private-Workspace** (not this repo) |
+
+## Layout (what lives where)
+
+| Path | Purpose |
+|---|---|
+| `AGENTS.md` / `CLAUDE.md` | Agent entry (short) |
+| `AI_WORKFLOW.md` | Canonical workflow |
+| `PROMPTS/` | Routing index + on-demand work-assist |
+| `RULES/` | Constraints by topic |
+| `DOCS/` | Maps, project format, GitHub process |
+| `STATE/` | Shared verified state |
+| `TASKS/` | Backlog |
+| `TOOLS/` | AgentKit |
+| `PROJECTS/` | Per-project four-file records |
+| `LOGS/` | Append-only ledger |
+| `scripts/` | CI helpers |
+
+Names under `PROMPTS/work-assist/` are content labels: open by need, not by batch.
