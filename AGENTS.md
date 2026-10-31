@@ -5,8 +5,10 @@ For every new task and every resumption after context loss, follow the reread ro
 - Read [AI workflow](AI_WORKFLOW.md), [workspace state](STATE/workspace_state.md), [current tasks](TASKS/tasks.md), and [repository map](DOCS/REPOSITORY_MAP.md).
 - If a specific project is in scope, read its `WORK_MODELS.md` and `IN_PROGRESS.md`; read `PLAN.md` and `CACHE.md` only when relevant. The canonical format and lifecycle are in [Project workflow](DOCS/PROJECT_WORKFLOW.md).
 - Use the [prompt/use-case index](PROMPTS/README.md) and the [rule index](RULES/README.md) to select the one relevant procedure instead of copying or loading unrelated instructions.
+- For non-trivial investigation, design, implementation, or verification work, open only the matching file under [PROMPTS/work-assist/](PROMPTS/work-assist/) (names indicate content: workflow, environment, debug-and-reuse, quality-and-migration, research-and-instructions).
 - Inspect before editing; keep changes scoped and avoid overwriting another contributor's active work.
 - Do not invent facts, links, test results or completion claims. Do not expose secrets, private conversations, personal data or private workspace links.
 - Prefer existing tools; check availability and behavior before implementing substitutes.
+- Stay one agent role. Do not invent multi-persona debates or virtual reviewers unless the user asks. See [ROLE_AND_PERSPECTIVE](RULES/ROLE_AND_PERSPECTIVE.md).
 - Follow [Android APK build policy](RULES/ANDROID_BUILD_RULES.md): never compile APK/AAB workloads on the phone; use GitHub-hosted builds and report observed results.
 - Validate links and relevant tests before reporting. Summarize changed files, evidence, limits and next steps in the PR.
