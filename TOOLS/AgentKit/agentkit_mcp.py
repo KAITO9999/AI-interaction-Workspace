@@ -23,10 +23,10 @@ from agentkit_process import run_process
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 ANNOTATIONS = ToolAnnotations(
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=False,
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=False,
 )
 OUTPUT_LIMIT = 16_000
 DEFAULT_TIMEOUT = 15
@@ -146,6 +146,12 @@ def agentkit_locate(root_id: str, path: str, start: int, end: int | None = None)
         raise ValueError("provide a 1-based range of at most 200 lines")
     root = get_root(root_id)
     target = resolve_path(root, path)
+    if task in {"json-check", "sha256"} and not target.is_file():
+        raise ValueError(f"{task} requires a file")
+    if task == "json-check" and target.stat().st_size > 16 * 1024 * 1024:
+        raise ValueError("JSON validation is limited to files at or below 16 MiB")
+    if task == "sha256" and target.stat().st_size > 256 * 1024 * 1024:
+        raise ValueError("SHA-256 inspection is limited to files at or below 256 MiB")
     if not target.is_file():
         raise ValueError("path must identify a file")
     args = [str(target), "--start", str(start)]
