@@ -5,7 +5,7 @@ This optional MCP server exposes a read-only subset of AgentKit to standard MCP 
 ## Install from GitHub
 
 ```sh
-git clone https://github.com/KAITO9999/AI-interaction-Workspace.git
+git clone --branch feat/agentkit-readonly-mcp https://github.com/KAITO9999/AI-interaction-Workspace.git
 cd AI-interaction-Workspace
 python3 -m pip install -r TOOLS/AgentKit/requirements-mcp.txt
 ```
@@ -24,7 +24,7 @@ Root IDs are names supplied by the operator. Tool calls use those IDs and relati
 
 ## Run locally
 
-For a private Termux connector, use the default stdio transport with OpenAI's `tunnel-client`. Keep the runtime key in an environment variable and configure only selected project folders:
+For a private connector, the default stdio transport can run under OpenAI's `tunnel-client`. Keep the runtime key in an environment variable and configure only selected project folders:
 
 ```sh
 export AGENTKIT_ROOTS_JSON='{"project":{"path":"/path/to/project","description":"Selected project source"}}'
@@ -39,6 +39,8 @@ tunnel-client run --profile agentkit
 ```
 
 Keep `tunnel-client` running while ChatGPT discovers or calls the tools. The tunnel client starts the server as a local stdio process and carries MCP requests over an outbound connection; no inbound listener is required. For another MCP host that launches local subprocesses, use `python3 .../agentkit_mcp.py` directly.
+
+The tunnel-client release packages list Linux, macOS, and Windows targets; Android/Termux compatibility is not guaranteed. Run it in a supported Linux environment (including a suitable Proot distro) that can reach the MCP server, or use another authenticated private MCP host. AgentKit's native Termux CLI/skill does not depend on tunnel-client.
 
 In ChatGPT on the web, add a custom MCP server from the Plugins page, select the matching Secure MCP Tunnel, then review the discovered actions and account permissions. Read-only access is the broadest supported permission class, but availability still depends on plan and workspace policy.
 
