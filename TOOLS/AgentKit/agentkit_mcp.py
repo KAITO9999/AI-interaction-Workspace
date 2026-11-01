@@ -32,6 +32,7 @@ OUTPUT_LIMIT = 16_000
 DEFAULT_TIMEOUT = 15
 MAX_TIMEOUT = 60
 MAX_PROBE_FILES = 3_000
+MAX_ROOTS = 16
 ROOT_ID = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$")
 
 mcp = MCPServer(
@@ -55,6 +56,8 @@ def configured_roots() -> dict[str, dict[str, str]]:
         raise ValueError("AGENTKIT_ROOTS_JSON must be a JSON object") from exc
     if not isinstance(value, dict):
         raise ValueError("AGENTKIT_ROOTS_JSON must be a JSON object")
+    if len(value) > MAX_ROOTS:
+        raise ValueError(f"at most {MAX_ROOTS} roots may be configured")
     roots: dict[str, dict[str, str]] = {}
     for root_id, item in value.items():
         if not isinstance(root_id, str) or not ROOT_ID.fullmatch(root_id):
