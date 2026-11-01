@@ -1,6 +1,6 @@
 # AgentKit standard MCP connector
 
-This optional MCP server exposes a read-only subset of AgentKit to standard MCP clients, including ChatGPT custom MCP apps and Codex. It uses the official Python MCP SDK and Streamable HTTP; it is not a desktop-only plugin. Availability in ChatGPT depends on the account/workspace plan and policy.
+This optional MCP server exposes a read-only subset of AgentKit to standard MCP clients, including ChatGPT custom MCP apps and Codex. It uses the official Python MCP SDK and supports stdio plus Streamable HTTP; it is not a desktop-only plugin. ChatGPT custom MCP setup is currently on the web, and availability depends on the account/workspace plan and policy.
 
 ## Install from GitHub
 
@@ -24,15 +24,25 @@ Root IDs are names supplied by the operator. Tool calls use those IDs and relati
 
 ## Run locally
 
-For ChatGPT on the same account, connect through an available Secure MCP Tunnel. Keep the MCP server bound to loopback:
+For a private Termux connector, use the default stdio transport with OpenAI's `tunnel-client`. Keep the runtime key in an environment variable and configure only selected project folders:
 
 ```sh
-python3 TOOLS/AgentKit/agentkit_mcp.py --transport streamable-http --host 127.0.0.1 --port 8765 --stateless
+export AGENTKIT_ROOTS_JSON='{"project":{"path":"/path/to/project","description":"Selected project source"}}'
+export CONTROL_PLANE_API_KEY='<enter locally; do not paste into chat or commit>'
+tunnel-client init \
+  --sample sample_mcp_stdio_local \
+  --profile agentkit \
+  --tunnel-id '<tunnel-id>' \
+  --mcp-command 'python3 /path/to/AI-interaction-Workspace/TOOLS/AgentKit/agentkit_mcp.py'
+tunnel-client doctor --profile agentkit --explain
+tunnel-client run --profile agentkit
 ```
 
-The MCP endpoint is `http://127.0.0.1:8765/mcp`. Alternatively, use `--transport stdio` with an MCP client that launches local servers. A public HTTPS deployment needs an authenticated front end and HTTPS; do not expose this unauthenticated filesystem reader directly to the Internet.
+Keep `tunnel-client` running while ChatGPT discovers or calls the tools. The tunnel client starts the server as a local stdio process and carries MCP requests over an outbound connection; no inbound listener is required. For another MCP host that launches local subprocesses, use `python3 .../agentkit_mcp.py` directly.
 
-In ChatGPT, add a custom MCP server from the Plugins page, select the Secure MCP Tunnel for this local endpoint, then review the discovered actions and account permissions. Use ChatGPT on the web; custom MCP server support is not currently available in the ChatGPT mobile app. Read-only access is the broadest supported permission class, but availability still depends on plan and workspace policy.
+In ChatGPT on the web, add a custom MCP server from the Plugins page, select the matching Secure MCP Tunnel, then review the discovered actions and account permissions. Read-only access is the broadest supported permission class, but availability still depends on plan and workspace policy.
+
+For an HTTP MCP host, use `--transport streamable-http --host 127.0.0.1 --port 8765 --stateless`; configure `tunnel-client` with `--mcp-server-url http://127.0.0.1:8765/mcp`. A public HTTPS deployment needs an authenticated front end and HTTPS. Do not expose this filesystem reader directly to the Internet without authentication.
 
 ## Available tools
 
