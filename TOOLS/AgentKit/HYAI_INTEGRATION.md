@@ -9,11 +9,13 @@ AgentKit は Termux 上の環境確認・限定的な代替CLI・ソースの静
 上流ソースは `KAITO9999/AI-interaction-Workspace` の `TOOLS/AgentKit/` です。初回は Git で取得し、更新は対象リポジトリで差分を確認してから fast-forward します。
 
 ```sh
-git clone https://github.com/KAITO9999/AI-interaction-Workspace.git
+git clone --branch feat/agentkit-readonly-mcp https://github.com/KAITO9999/AI-interaction-Workspace.git
+sh AI-interaction-Workspace/TOOLS/AgentKit/install-skill.sh
 git -C AI-interaction-Workspace pull --ff-only
+sh AI-interaction-Workspace/TOOLS/AgentKit/install-skill.sh
 ```
 
-skill と connector は上流の `TOOLS/AgentKit/` 内の該当ファイルから取得します。Termux 側へ反映するときは既存の `~/.codex/skills/agentkit` をバックアップまたは差分確認し、必要な版を明示して配置します。`pull` だけでインストール済み skill が自動更新されるわけではありません。
+2回目の installer 実行前に `git diff` で取得差分を確認します。installer は上流ファイルを `~/.codex/skills/agentkit` へコピーしますが、既存の未収録ファイルを削除しません。`pull` だけでインストール済み skill が自動更新されるわけではありません。
 
 ## Termux / HyAI 内の CLI 経路
 
