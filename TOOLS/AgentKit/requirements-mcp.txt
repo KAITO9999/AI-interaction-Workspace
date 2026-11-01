@@ -1,0 +1,2 @@
+# Optional dependency for the standard MCP connector (Python 3.11+).
+mcp>=2.0,<3.0
