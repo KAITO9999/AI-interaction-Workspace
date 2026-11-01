@@ -59,6 +59,8 @@ For an HTTP MCP host, use `--transport streamable-http --host 127.0.0.1 --port 8
 
 The connector does not expose arbitrary shell execution, package installation, TypeScript emission, provenance recording, file writes, or Android actions. MCP read-only annotations improve host UX; path restrictions and fixed argument vectors enforce the boundary.
 
+Tool results are sent to the connected model. Search/context/locate results can include file contents, and the probe can include local executable paths. The root allowlist limits what can be read; it does not redact secrets from selected files. Exclude credentials and private state from configured roots.
+
 ## HyAI local integration
 
 HyAI can use the Termux skill/CLI directly as a local AgentKit path. This is separate from the HyAI Bridge API, Lane routing, approval system, and any external model API call. Do not send local state or project contents to an external provider unless the user explicitly requests it.
