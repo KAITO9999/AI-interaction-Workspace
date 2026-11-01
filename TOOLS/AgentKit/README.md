@@ -56,6 +56,10 @@ Never record raw prompts, conversations, access tokens, private URLs or personal
 
 The audit checks ZIP CRC and member paths, parses JSON, compares BP/RP manifest versions and dependencies, and uses Node --check on JavaScript when Node is present. It does not extract the archive, validate every Minecraft schema or prove runtime behavior. In-world and Content Log checks remain separate.
 
+## Optional standard MCP connector
+
+A read-only MCP server for ChatGPT custom MCP apps and other MCP hosts is available separately. It exposes selected AgentKit inspection tools through Streamable HTTP or stdio, with explicit configured-root allowlisting. See [MCP_CONNECTOR.md](MCP_CONNECTOR.md) and [HYAI_INTEGRATION.md](HYAI_INTEGRATION.md). The connector does not expose arbitrary shell commands, package installation, file writes, or Android actions.
+
 ## Security and limitations
 
 - No privilege escalation, restriction bypass or credential discovery. Package installation is opt-in only through the resolver's explicit `--install` flag.
